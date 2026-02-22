@@ -323,13 +323,50 @@ const server = http.createServer((req, res) => {
     return res.end();
   }
   
+  // ============= DASHBOARD ROUTE (HTML UI) =============
+  if (url.pathname === "/" || url.pathname === "/dashboard") {
+    // Read and serve the dashboard HTML
+    const dashboardPath = path.join(__dirname, 'dashboard.html');
+    
+    // Check if dashboard.html exists
+    if (fs.existsSync(dashboardPath)) {
+      try {
+        const dashboardHtml = fs.readFileSync(dashboardPath, 'utf8');
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        return res.end(dashboardHtml);
+      } catch (err) {
+        console.error("Error reading dashboard.html:", err);
+        res.writeHead(500, { 'Content-Type': 'text/plain' });
+        return res.end('Dashboard file error');
+      }
+    } else {
+      // If dashboard.html doesn't exist, serve a simple message
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      return res.end(`
+        <!DOCTYPE html>
+        <html>
+          <head><title>Universal Parts API</title></head>
+          <body style="font-family: sans-serif; padding: 40px; text-align: center;">
+            <h1>🔧 Universal Parts API</h1>
+            <p>API is running. Dashboard file not found.</p>
+            <p>Please create <code>dashboard.html</code> in the same directory.</p>
+            <hr>
+            <p><a href="/categories">View Categories (JSON)</a> | <a href="/health">Health Check</a></p>
+            <p style="margin-top: 40px; color: #666;">Created by Munax</p>
+          </body>
+        </html>
+      `);
+    }
+  }
+  
   // API Routes
-  if (url.pathname === "/") {
+  if (url.pathname === "/api" || url.pathname === "/api/") {
     res.writeHead(200, { 'Content-Type': 'application/json', ...corsHeaders });
     return res.end(JSON.stringify({
       name: "Universal Parts API",
       version: "3.0.0",
       status: "running",
+      watermark: "Created by Munax",
       features: {
         exactMatching: true,
         noteValidation: true,
@@ -337,7 +374,8 @@ const server = http.createServer((req, res) => {
         brandSeparation: true
       },
       endpoints: {
-        "/": "This information",
+        "/": "Technician Dashboard (HTML)",
+        "/api": "This API information",
         "/search?part={category}&model={model}": "Search for compatible parts",
         "/categories": "List all available part categories",
         "/health": "Health check endpoint"
@@ -349,7 +387,8 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'application/json', ...corsHeaders });
     return res.end(JSON.stringify({ 
       status: "healthy", 
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      watermark: "Created by Munax"
     }));
   }
   
@@ -362,7 +401,10 @@ const server = http.createServer((req, res) => {
     }));
     
     res.writeHead(200, { 'Content-Type': 'application/json', ...corsHeaders });
-    return res.end(JSON.stringify({ categories }, null, 2));
+    return res.end(JSON.stringify({ 
+      categories,
+      watermark: "Created by Munax"
+    }, null, 2));
   }
   
   if (url.pathname === "/search") {
@@ -373,7 +415,8 @@ const server = http.createServer((req, res) => {
       res.writeHead(400, { 'Content-Type': 'application/json', ...corsHeaders });
       return res.end(JSON.stringify({ 
         error: "Missing parameters",
-        message: "Both 'part' and 'model' parameters are required"
+        message: "Both 'part' and 'model' parameters are required",
+        watermark: "Created by Munax"
       }));
     }
     
@@ -390,7 +433,8 @@ const server = http.createServer((req, res) => {
         availableCategories: Object.keys(searchIndex).map(key => ({
           key,
           name: searchIndex[key].name
-        }))
+        })),
+        watermark: "Created by Munax"
       }));
     }
     
@@ -435,7 +479,8 @@ const server = http.createServer((req, res) => {
       results: matches.slice(0, 20), // Limit results
       summary: matches.length > 0 
         ? `Found ${matches.length} compatible listings for ${model}`
-        : `No exact matches found for ${model}. Try a more specific model name.`
+        : `No exact matches found for ${model}. Try a more specific model name.`,
+      watermark: "Created by Munax" // 👈 Watermark at the bottom
     };
     
     res.writeHead(200, { 'Content-Type': 'application/json', ...corsHeaders });
@@ -444,7 +489,10 @@ const server = http.createServer((req, res) => {
   
   // 404 for unknown routes
   res.writeHead(404, { 'Content-Type': 'application/json', ...corsHeaders });
-  res.end(JSON.stringify({ error: "Endpoint not found" }));
+  res.end(JSON.stringify({ 
+    error: "Endpoint not found",
+    watermark: "Created by Munax"
+  }));
 });
 
 // Start server
@@ -462,6 +510,8 @@ server.listen(PORT, "0.0.0.0", () => {
     totalModels += searchIndex[key].models.length;
   });
   console.log(`✅ Total models indexed: ${totalModels}`);
+  console.log("✅ Dashboard available at / or /dashboard");
+  console.log("✅ API endpoints at /api, /search, /categories, /health");
   console.log("=================================\n");
 });
 
