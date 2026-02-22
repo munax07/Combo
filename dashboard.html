@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universal Parts API · Technician Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        body {
+            background: #f4f7fb;
+            color: #1a2639;
+            padding: 24px;
+        }
+
+        .dashboard {
+            max-width: 1440px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .header-left h1 {
+            font-size: 28px;
+            font-weight: 600;
+            color: #0b1e33;
+            letter-spacing: -0.3px;
+        }
+
+        .header-left p {
+            color: #5a6b7c;
+            font-size: 15px;
+            margin-top: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .badge {
+            background: #e9ecf3;
+            padding: 4px 10px;
+            border-radius: 30px;
+            font-size: 12px;
+            font-weight: 500;
+            color: #2c3e50;
+        }
+
+        .status-badge {
+            background: #d1f0d1;
+            color: #1e7e34;
+            padding: 8px 16px;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-badge::before {
+            content: "";
+            width: 10px;
+            height: 10px;
+            background: #2dc937;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        /* Quick Stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 20px;
+            padding: 20px 18px;
+            box-shadow: 0 4px 12px rgba(0,20,30,0.04);
+            border: 1px solid rgba(0,0,0,0.02);
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: #5f6c80;
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+
+        .stat-number {
+            font-size: 38px;
+            font-weight: 600;
+            color: #0a1c2f;
+            line-height: 1.1;
+        }
+
+        .stat-unit {
+            font-size: 14px;
+            color: #8a99aa;
+            margin-left: 4px;
+            font-weight: 400;
+        }
+
+        /* Search Section */
+        .search-section {
+            background: white;
+            border-radius: 28px;
+            padding: 28px 30px;
+            margin-bottom: 28px;
+            box-shadow: 0 10px 25px -8px rgba(0,20,40,0.1);
+            border: 1px solid #ffffff50;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 18px;
+            color: #1f3a5f;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title span {
+            background: #eef2f6;
+            padding: 4px 12px;
+            border-radius: 40px;
+            font-size: 13px;
+            font-weight: 400;
+            color: #3f5570;
+        }
+
+        .search-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            align-items: flex-end;
+        }
+
+        .input-group {
+            flex: 2 1 260px;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: #405b73;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .input-group input, .input-group select {
+            width: 100%;
+            padding: 14px 18px;
+            background: #f8fafd;
+            border: 1.5px solid #e2e9f2;
+            border-radius: 18px;
+            font-size: 15px;
+            transition: all 0.2s;
+            color: #1d2b3e;
+            font-weight: 500;
+        }
+
+        .input-group input:focus, .input-group select:focus {
+            border-color: #3f8cff;
+            outline: none;
+            background: white;
+            box-shadow: 0 0 0 3px #d9e9ff;
+        }
+
+        .search-btn {
+            background: #1a2c47;
+            border: none;
+            color: white;
+            font-weight: 600;
+            padding: 14px 36px;
+            border-radius: 40px;
+            font-size: 15px;
+            cursor: pointer;
+            transition: 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border: 1px solid #ffffff20;
+            letter-spacing: 0.3px;
+            flex: 0 0 auto;
+        }
+
+        .search-btn:hover {
+            background: #24416b;
+            transform: scale(1.02);
+            box-shadow: 0 8px 18px -6px #1a2c4750;
+        }
+
+        /* Results Panel */
+        .results-panel {
+            background: white;
+            border-radius: 28px;
+            padding: 0;
+            box-shadow: 0 10px 28px -10px #0b1e3320;
+            border: 1px solid #eaeef4;
+            overflow: hidden;
+            margin-bottom: 28px;
+        }
+
+        .results-header {
+            background: #f9fcff;
+            padding: 18px 28px;
+            border-bottom: 1px solid #e5ecf5;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .results-header h3 {
+            font-weight: 600;
+            color: #0b2a4a;
+            font-size: 18px;
+        }
+
+        .match-count {
+            background: #e1ecfe;
+            padding: 6px 18px;
+            border-radius: 40px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #004e9e;
+        }
+
+        .result-item {
+            padding: 20px 28px;
+            border-bottom: 1px solid #edf2f9;
+            transition: 0.1s;
+        }
+
+        .result-item:hover {
+            background: #fafdff;
+        }
+
+        .result-item:last-child {
+            border-bottom: none;
+        }
+
+        .result-brand {
+            display: inline-block;
+            background: #e5ecf5;
+            padding: 4px 16px;
+            border-radius: 30px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #1e3a5f;
+            margin-bottom: 12px;
+            letter-spacing: 0.2px;
+        }
+
+        .compatibility-line {
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 14px;
+            background: #f2f6fc;
+            padding: 14px 18px;
+            border-radius: 18px;
+            color: #17345c;
+            line-height: 1.6;
+            border: 1px solid #dde5f0;
+            word-break: break-word;
+        }
+
+        .match-meta {
+            display: flex;
+            gap: 20px;
+            margin-top: 12px;
+            font-size: 13px;
+            color: #556b82;
+        }
+
+        .match-type {
+            background: #dae5f5;
+            padding: 3px 12px;
+            border-radius: 20px;
+            font-weight: 500;
+        }
+
+        .match-score {
+            font-weight: 600;
+            color: #1f4f8a;
+        }
+
+        .no-results {
+            padding: 48px;
+            text-align: center;
+            color: #6f7d91;
+            font-size: 16px;
+            background: #fafdff;
+        }
+
+        /* Categories Grid */
+        .categories-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 12px;
+            margin: 20px 0;
+        }
+
+        .category-chip {
+            background: #ecf2fa;
+            padding: 12px 18px;
+            border-radius: 30px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #1f3f68;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #d0ddee;
+            transition: 0.1s;
+        }
+
+        .category-chip:hover {
+            background: #e1ebf9;
+            cursor: pointer;
+            border-color: #809fc9;
+        }
+
+        .model-count {
+            background: #ffffff;
+            padding: 3px 12px;
+            border-radius: 30px;
+            font-size: 12px;
+            color: #2a4b7a;
+            font-weight: 600;
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 48px;
+            text-align: center;
+            color: #64748f;
+            font-size: 14px;
+            border-top: 1px solid #dbe2ec;
+            padding-top: 28px;
+        }
+
+        .watermark {
+            font-weight: 500;
+            color: #1e3f60;
+            background: #ecf3fb;
+            display: inline-block;
+            padding: 4px 24px;
+            border-radius: 40px;
+            font-size: 13px;
+            margin-top: 8px;
+        }
+    </style>
+</head>
+<body>
+<div class="dashboard">
+
+    <!-- Header -->
+    <div class="header">
+        <div class="header-left">
+            <h1>🔧 Universal Parts · Technician Console</h1>
+            <p><span class="badge">v3.0</span> Real-time compatibility database · 7,000+ models indexed</p>
+        </div>
+        <div class="status-badge">API connected · live</div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid" id="stats-container">
+        <div class="stat-card"><div class="stat-label">📦 Categories</div><div class="stat-number" id="stat-categories">—</div></div>
+        <div class="stat-card"><div class="stat-label">🔋 Active parts</div><div class="stat-number" id="stat-parts">—</div></div>
+        <div class="stat-card"><div class="stat-label">📱 Phone models</div><div class="stat-number" id="stat-models">—</div></div>
+        <div class="stat-card"><div class="stat-label">⚡ Today</div><div class="stat-number" id="stat-today">∞</div></div>
+    </div>
+
+    <!-- Search Section -->
+    <div class="search-section">
+        <div class="section-title">
+            🔍 Compatibility lookup
+            <span>exact match only · no false positives</span>
+        </div>
+        <div class="search-row">
+            <div class="input-group">
+                <label>📋 Part category</label>
+                <select id="categorySelect">
+                    <option value="">— loading categories —</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>📱 Phone model</label>
+                <input type="text" id="modelInput" placeholder="e.g. Redmi Note 13 Pro, Samsung A15..." value="Redmi Note 13 Pro">
+            </div>
+            <button class="search-btn" id="searchBtn">
+                <span>🔎</span> SEARCH
+            </button>
+        </div>
+    </div>
+
+    <!-- Results Panel -->
+    <div class="results-panel" id="resultsPanel">
+        <div class="results-header">
+            <h3>📋 Compatibility results</h3>
+            <span class="match-count" id="matchCount">0 matches</span>
+        </div>
+        <div id="resultsList">
+            <div class="no-results">⬅ Enter a model and select category, then search.</div>
+        </div>
+    </div>
+
+    <!-- Categories (Quick reference) -->
+    <div class="search-section" style="padding: 20px 24px;">
+        <div class="section-title">
+            🗂️ All categories · quick select
+        </div>
+        <div class="categories-grid" id="categoriesGrid">
+            <!-- populated by js -->
+        </div>
+    </div>
+
+    <!-- Footer watermark -->
+    <div class="footer">
+        <div class="watermark" id="watermark">⚙️ Created by Munax · technician dashboard</div>
+        <div style="margin-top: 12px;">© 2025 Universal Parts API — precise matching engine</div>
+    </div>
+
+</div>
+
+<script>
+    // Configuration
+    const API_BASE = '';  // relative path (same origin) or your full URL: 'https://munax-universal-api.koyeb.app';
+
+    // State
+    let categories = [];
+    let allCategoryKeys = [];
+
+    // DOM elements
+    const categorySelect = document.getElementById('categorySelect');
+    const modelInput = document.getElementById('modelInput');
+    const searchBtn = document.getElementById('searchBtn');
+    const resultsList = document.getElementById('resultsList');
+    const matchCountSpan = document.getElementById('matchCount');
+    const categoriesGrid = document.getElementById('categoriesGrid');
+    const watermarkDiv = document.getElementById('watermark');
+
+    // Stats elements
+    const statCategories = document.getElementById('stat-categories');
+    const statParts = document.getElementById('stat-parts');
+    const statModels = document.getElementById('stat-models');
+
+    // Initialize: fetch categories
+    async function loadCategories() {
+        try {
+            const res = await fetch(`${API_BASE}/categories`);
+            const data = await res.json();
+            categories = data.categories || [];
+
+            // Update stats
+            statCategories.innerText = categories.length;
+            let totalModels = 0;
+            categories.forEach(c => totalModels += c.modelCount || 0);
+            statModels.innerText = totalModels.toLocaleString();
+            statParts.innerText = categories.filter(c => c.modelCount > 0).length;
+
+            // Populate select
+            categorySelect.innerHTML = '<option value="">— select category —</option>';
+            categories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat.key;
+                option.textContent = `${cat.name} (${cat.modelCount} models)`;
+                categorySelect.appendChild(option);
+            });
+
+            // Populate grid
+            renderCategoryGrid(categories);
+
+            // Store keys for quick access
+            allCategoryKeys = categories.map(c => c.key);
+
+        } catch (e) {
+            console.error('Failed to load categories', e);
+            categorySelect.innerHTML = '<option value="">⚠️ error loading</option>';
+        }
+    }
+
+    function renderCategoryGrid(cats) {
+        categoriesGrid.innerHTML = '';
+        cats.filter(c => c.modelCount > 0).forEach(cat => {
+            const chip = document.createElement('div');
+            chip.className = 'category-chip';
+            chip.innerHTML = `${cat.name} <span class="model-count">${cat.modelCount}</span>`;
+            chip.addEventListener('click', () => {
+                categorySelect.value = cat.key;
+                // Optionally trigger search automatically
+            });
+            categoriesGrid.appendChild(chip);
+        });
+    }
+
+    // Search function
+    async function performSearch() {
+        const part = categorySelect.value;
+        const model = modelInput.value.trim();
+
+        if (!part || !model) {
+            resultsList.innerHTML = '<div class="no-results">⚠️ Please select a category and enter a model.</div>';
+            matchCountSpan.innerText = '0 matches';
+            return;
+        }
+
+        // Show loading
+        resultsList.innerHTML = '<div class="no-results">🔍 searching ...</div>';
+        matchCountSpan.innerText = '...';
+
+        try {
+            const url = `${API_BASE}/search?part=${encodeURIComponent(part)}&model=${encodeURIComponent(model)}`;
+            const res = await fetch(url);
+            const data = await res.json();
+
+            // Display watermark from API if exists, otherwise default
+            if (data.watermark) {
+                watermarkDiv.innerText = `⚙️ ${data.watermark} · technician dashboard`;
+            }
+
+            if (!data.success || !data.results || data.results.length === 0) {
+                resultsList.innerHTML = `<div class="no-results">❌ No exact matches for "${model}" in this category.</div>`;
+                matchCountSpan.innerText = '0 matches';
+                return;
+            }
+
+            // Render results
+            let html = '';
+            data.results.forEach(r => {
+                html += `
+                    <div class="result-item">
+                        <span class="result-brand">🏷️ ${r.brand || 'Generic'}</span>
+                        <div class="compatibility-line">${r.compatibility}</div>
+                        <div class="match-meta">
+                            <span class="match-type">${r.matchType || 'match'}</span>
+                            <span class="match-score">score: ${r.score || 0}</span>
+                            ${r.matchedModel ? `<span>🔹 matched: ${r.matchedModel}</span>` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+
+            resultsList.innerHTML = html;
+            matchCountSpan.innerText = `${data.totalMatches} match${data.totalMatches !== 1 ? 'es' : ''}`;
+
+        } catch (err) {
+            resultsList.innerHTML = '<div class="no-results">⚠️ API error — check connection.</div>';
+            matchCountSpan.innerText = 'error';
+            console.error(err);
+        }
+    }
+
+    // Event listeners
+    searchBtn.addEventListener('click', performSearch);
+    modelInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') performSearch(); });
+
+    // Quick fill demo: prefill Redmi Note 13 Pro and select first category?
+    window.addEventListener('load', () => {
+        loadCategories().then(() => {
+            // optionally set default category to tempered glass
+            const defaultCat = categories.find(c => c.key.includes('tempered') || c.name.includes('TEMPERED'));
+            if (defaultCat) categorySelect.value = defaultCat.key;
+
+            // performSearch() // uncomment if you want auto-search on load
+        });
+    });
+</script>
+</body>
+</html>
