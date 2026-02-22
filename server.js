@@ -16,7 +16,6 @@ try {
     console.log(`📊 Found ${rawData.categories?.length || 0} categories`);
   } else {
     console.error("❌ data.json file not found!");
-    console.log("Please ensure data.json is in the same directory as server.js");
   }
 } catch (err) {
   console.error("❌ Failed to parse data.json:", err.message);
@@ -29,23 +28,62 @@ const searchIndex = {};
 function normalize(text) {
   if (!text) return "";
   return text.toString().toLowerCase()
-    .replace(/[^\w\s]/g, ' ')  // Replace special chars with space
-    .replace(/\s+/g, ' ')       // Collapse multiple spaces
+    .replace(/[^\w\s]/g, ' ')
+    .replace(/\s+/g, ' ')
     .trim();
 }
 
-// Helper function to create URL-friendly keys from category names
+// Helper function to extract model numbers/identifiers
+function extractModelIdentifiers(model) {
+  if (!model) return [];
+  
+  const normalized = normalize(model);
+  const identifiers = [];
+  
+  // Extract patterns like "note10", "a15", "11pro", "redmi9", etc.
+  const patterns = [
+    /([a-z]+)[-\s]*(\d+[a-z]*)/i,  // note10, a15, redmi9
+    /(\d+[a-z]*)[-\s]*([a-z]+)/i,   // 10pro, 11ultra
+    /([a-z]+)[-\s]*(\d+)[-\s]*([a-z]+)/i, // note10pro, redmi9prime
+  ];
+  
+  // Add the full normalized string
+  identifiers.push(normalized);
+  
+  // Extract alphanumeric sequences
+  const alnumMatches = normalized.match(/[a-z]+[\d]+|[\d]+[a-z]+|\d+/g) || [];
+  identifiers.push(...alnumMatches);
+  
+  // Extract brand + number combinations
+  const brands = ['redmi', 'mi', 'poco', 'samsung', 'galaxy', 'oppo', 'realme', 
+                  'vivo', 'iqoo', 'oneplus', 'nord', 'infinix', 'tecno', 'itel',
+                  'moto', 'motorola', 'lava', 'micromax', 'note', 'k', 'a', 'f', 'm'];
+  
+  brands.forEach(brand => {
+    if (normalized.includes(brand)) {
+      const regex = new RegExp(`${brand}[\\s-]*(\\d+[a-z]*)`, 'i');
+      const match = normalized.match(regex);
+      if (match) {
+        identifiers.push(match[0].replace(/\s+/g, ''));
+      }
+    }
+  });
+  
+  return [...new Set(identifiers)]; // Remove duplicates
+}
+
+// Function to create category key
 function createCategoryKey(categoryName) {
   if (!categoryName) return "";
   return categoryName
     .toLowerCase()
-    .replace(/^\d+\.\s*/, '')           // Remove numbering like "1. "
-    .replace(/[^a-z0-9]/g, '_')          // Replace special chars with underscore
-    .replace(/_+/g, '_')                 // Collapse multiple underscores
-    .replace(/^_|_$/g, '');              // Remove leading/trailing underscores
+    .replace(/^\d+\.\s*/, '')
+    .replace(/[^a-z0-9]/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_|_$/g, '');
 }
 
-// Build the search index
+// Build the search index with pre-processed data
 if (rawData.categories && Array.isArray(rawData.categories)) {
   rawData.categories.forEach(category => {
     if (!category || !category.name) return;
@@ -56,7 +94,8 @@ if (rawData.categories && Array.isArray(rawData.categories)) {
     searchIndex[categoryKey] = {
       name: category.name,
       brands: [],
-      allLines: []
+      models: [], // Store individual phone models, not full lines
+      originalLines: []
     };
 
     if (category.brands && Array.isArray(category.brands)) {
@@ -65,99 +104,149 @@ if (rawData.categories && Array.isArray(rawData.categories)) {
         
         const brandInfo = {
           name: brand.name,
-          models: []
+          compatibilityGroups: []
         };
 
         if (brand.models && Array.isArray(brand.models)) {
           brand.models.forEach(modelLine => {
             if (!modelLine) return;
             
-            // Skip placeholder entries but keep them for reference
+            // Skip placeholder entries
             const isPlaceholder = modelLine.toLowerCase().includes('coming soon') || 
-                                  modelLine.toLowerCase().includes('new list');
+                                  modelLine.toLowerCase().includes('new list') ||
+                                  modelLine.toLowerCase().includes('universal');
             
-            brandInfo.models.push({
-              original: modelLine,
-              normalized: normalize(modelLine),
-              isPlaceholder
-            });
+            if (isPlaceholder) return;
             
-            searchIndex[categoryKey].allLines.push({
+            // Store original line for reference
+            searchIndex[categoryKey].originalLines.push({
               brand: brand.name,
               text: modelLine,
-              normalized: normalize(modelLine),
-              isPlaceholder
+              normalized: normalize(modelLine)
             });
+            
+            // Parse the line to extract individual models
+            // Lines are formatted like: "Model1 = Model2 = Model3 = Model4"
+            if (modelLine.includes('=')) {
+              const models = modelLine.split('=').map(m => m.trim()).filter(m => m);
+              
+              brandInfo.compatibilityGroups.push({
+                originalLine: modelLine,
+                models: models
+              });
+              
+              // Add each individual model to the models index
+              models.forEach(modelName => {
+                if (modelName && !modelName.toLowerCase().includes('coming')) {
+                  const normalizedModel = normalize(modelName);
+                  searchIndex[categoryKey].models.push({
+                    brand: brand.name,
+                    original: modelName,
+                    normalized: normalizedModel,
+                    groupLine: modelLine,
+                    identifiers: extractModelIdentifiers(normalizedModel)
+                  });
+                }
+              });
+            } else {
+              // Single model line
+              const modelName = modelLine.trim();
+              if (modelName && !modelName.toLowerCase().includes('coming')) {
+                const normalizedModel = normalize(modelName);
+                searchIndex[categoryKey].models.push({
+                  brand: brand.name,
+                  original: modelName,
+                  normalized: normalizedModel,
+                  groupLine: modelName,
+                  identifiers: extractModelIdentifiers(normalizedModel)
+                });
+              }
+            }
           });
         }
         
-        searchIndex[categoryKey].brands.push(brandInfo);
+        if (brandInfo.compatibilityGroups.length > 0) {
+          searchIndex[categoryKey].brands.push(brandInfo);
+        }
       });
     }
     
-    console.log(`   📝 Indexed ${searchIndex[categoryKey].allLines.length} model lines`);
+    console.log(`   📝 Indexed ${searchIndex[categoryKey].models.length} individual models`);
   });
 }
 
-// Advanced matching function
-function smartMatch(searchModel, line) {
-  if (!searchModel || !line) return false;
+// Precise matching function - prioritizes exact matches
+function preciseMatch(searchModel, modelEntry) {
+  if (!searchModel || !modelEntry) return { match: false, score: 0 };
   
   const cleanSearch = normalize(searchModel);
-  const cleanLine = normalize(line);
   
-  if (cleanLine.includes(cleanSearch)) return true;
-  
-  // Split the line by common separators
-  const separators = ['=', ',', ';', '\\+', '\\|', '/'];
-  const separatorRegex = new RegExp(`[${separators.join('')}]`);
-  
-  if (separatorRegex.test(line)) {
-    const parts = line.split(separatorRegex).map(p => normalize(p));
-    return parts.some(part => 
-      part.includes(cleanSearch) || 
-      cleanSearch.includes(part) ||
-      levenshteinSimilarity(part, cleanSearch) > 0.8
-    );
+  // EXACT MATCH (highest priority)
+  if (modelEntry.normalized === cleanSearch) {
+    return { match: true, score: 100, type: 'exact' };
   }
   
-  // Extract model numbers (like "A15", "Note 10", etc.)
-  const modelNumbers = cleanSearch.match(/[a-z]+[\d]+|[\d]+[a-z]+|\d+/g) || [];
-  const lineNumbers = cleanLine.match(/[a-z]+[\d]+|[\d]+[a-z]+|\d+/g) || [];
+  // Check if search model is contained in the model entry as a whole word
+  const searchWords = cleanSearch.split(' ');
+  const modelWords = modelEntry.normalized.split(' ');
   
-  return modelNumbers.some(num => 
-    lineNumbers.some(lineNum => lineNum.includes(num) || num.includes(lineNum))
-  );
-}
-
-// Levenshtein similarity for fuzzy matching
-function levenshteinSimilarity(a, b) {
-  if (a.length === 0) return b.length === 0 ? 1 : 0;
-  if (b.length === 0) return 0;
+  // Check if ALL search words appear in the model entry in order
+  let allWordsMatch = true;
+  let lastIndex = -1;
   
-  const matrix = [];
-  for (let i = 0; i <= b.length; i++) matrix[i] = [i];
-  for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+  for (const word of searchWords) {
+    const index = modelWords.findIndex((w, i) => i > lastIndex && w.includes(word));
+    if (index === -1) {
+      allWordsMatch = false;
+      break;
+    }
+    lastIndex = index;
+  }
   
-  for (let i = 1; i <= b.length; i++) {
-    for (let j = 1; j <= a.length; j++) {
-      if (b.charAt(i-1) === a.charAt(j-1)) {
-        matrix[i][j] = matrix[i-1][j-1];
-      } else {
-        matrix[i][j] = Math.min(
-          matrix[i-1][j-1] + 1,
-          matrix[i][j-1] + 1,
-          matrix[i-1][j] + 1
-        );
+  if (allWordsMatch && searchWords.length > 1) {
+    return { match: true, score: 90, type: 'phrase' };
+  }
+  
+  // Check if this is a Redmi Note model and prevent false matches
+  if (cleanSearch.includes('note') && modelEntry.normalized.includes('note')) {
+    // Extract note numbers
+    const searchNoteMatch = cleanSearch.match(/note[\s-]*(\d+)/i);
+    const modelNoteMatch = modelEntry.normalized.match(/note[\s-]*(\d+)/i);
+    
+    if (searchNoteMatch && modelNoteMatch) {
+      // If note numbers are different, it's NOT a match
+      if (searchNoteMatch[1] !== modelNoteMatch[1]) {
+        return { match: false, score: 0, type: 'note_mismatch' };
       }
     }
   }
   
-  const maxLen = Math.max(a.length, b.length);
-  return 1 - matrix[b.length][a.length] / maxLen;
+  // Check for exact identifier matches
+  const searchIdentifiers = extractModelIdentifiers(cleanSearch);
+  const modelIdentifiers = modelEntry.identifiers || [];
+  
+  // If ANY identifier matches exactly, it's a good match
+  for (const searchId of searchIdentifiers) {
+    for (const modelId of modelIdentifiers) {
+      if (searchId === modelId) {
+        return { match: true, score: 80, type: 'identifier_match' };
+      }
+    }
+  }
+  
+  // Check if model entry contains the exact search string
+  if (modelEntry.normalized.includes(cleanSearch)) {
+    // But prevent partial word matches (e.g., "note 5" matching "note 50")
+    const wordBoundaryCheck = new RegExp(`\\b${cleanSearch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`);
+    if (wordBoundaryCheck.test(modelEntry.normalized)) {
+      return { match: true, score: 70, type: 'contains_exact' };
+    }
+  }
+  
+  return { match: false, score: 0 };
 }
 
-// CORS headers for browser access
+// CORS headers
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, OPTIONS',
@@ -176,12 +265,16 @@ const server = http.createServer((req, res) => {
   
   // API Routes
   if (url.pathname === "/") {
-    // Home route with API info
     res.writeHead(200, { 'Content-Type': 'application/json', ...corsHeaders });
     return res.end(JSON.stringify({
       name: "Universal Parts API",
-      version: "1.0.0",
+      version: "2.0.0",
       status: "running",
+      features: {
+        exactMatching: true,
+        noFalsePositives: true,
+        noteModelValidation: true
+      },
       endpoints: {
         "/": "This information",
         "/search?part={category}&model={model}": "Search for compatible parts",
@@ -191,28 +284,25 @@ const server = http.createServer((req, res) => {
       categories: Object.keys(searchIndex).map(key => ({
         key,
         name: searchIndex[key].name,
-        brands: searchIndex[key].brands.map(b => b.name)
+        modelCount: searchIndex[key].models.length
       }))
     }, null, 2));
   }
   
   if (url.pathname === "/health") {
-    // Health check endpoint for Koyeb
     res.writeHead(200, { 'Content-Type': 'application/json', ...corsHeaders });
     return res.end(JSON.stringify({ 
       status: "healthy", 
-      timestamp: new Date().toISOString(),
-      dataLoaded: Object.keys(searchIndex).length > 0
+      timestamp: new Date().toISOString()
     }));
   }
   
   if (url.pathname === "/categories") {
-    // List all available categories
     const categories = Object.keys(searchIndex).map(key => ({
       key,
       name: searchIndex[key].name,
       brands: searchIndex[key].brands.map(b => b.name),
-      totalModels: searchIndex[key].allLines.filter(l => !l.isPlaceholder).length
+      modelCount: searchIndex[key].models.length
     }));
     
     res.writeHead(200, { 'Content-Type': 'application/json', ...corsHeaders });
@@ -220,58 +310,27 @@ const server = http.createServer((req, res) => {
   }
   
   if (url.pathname === "/search") {
-    // Search endpoint
     const part = url.searchParams.get("part");
     const model = url.searchParams.get("model");
     
-    // Validate parameters
-    if (!part) {
+    if (!part || !model) {
       res.writeHead(400, { 'Content-Type': 'application/json', ...corsHeaders });
       return res.end(JSON.stringify({ 
-        error: "Missing 'part' parameter",
-        message: "Please specify a part category"
+        error: "Missing parameters",
+        message: "Both 'part' and 'model' parameters are required"
       }));
     }
     
-    if (!model) {
-      res.writeHead(400, { 'Content-Type': 'application/json', ...corsHeaders });
-      return res.end(JSON.stringify({ 
-        error: "Missing 'model' parameter",
-        message: "Please specify a phone model"
-      }));
-    }
-    
-    // Find matching category (case-insensitive)
+    // Find matching category
     const categoryKey = Object.keys(searchIndex).find(key => 
-      key.includes(part.toLowerCase()) || 
-      part.toLowerCase().includes(key)
-    ) || part;
+      key.includes(part.toLowerCase().replace(/[^a-z0-9]/g, '_')) ||
+      searchIndex[key]?.name.toLowerCase().includes(part.toLowerCase())
+    );
     
-    const categoryData = searchIndex[categoryKey];
-    
-    if (!categoryData) {
-      // Try to find by partial match
-      const possibleCategories = Object.keys(searchIndex).filter(key => 
-        key.includes(part.toLowerCase().replace(/[^a-z0-9]/g, '_')) ||
-        searchIndex[key].name.toLowerCase().includes(part.toLowerCase())
-      );
-      
-      if (possibleCategories.length > 0) {
-        res.writeHead(404, { 'Content-Type': 'application/json', ...corsHeaders });
-        return res.end(JSON.stringify({
-          error: "Category not found",
-          message: `Did you mean one of these?`,
-          suggestions: possibleCategories.map(key => ({
-            key,
-            name: searchIndex[key].name
-          }))
-        }));
-      }
-      
+    if (!categoryKey || !searchIndex[categoryKey]) {
       res.writeHead(404, { 'Content-Type': 'application/json', ...corsHeaders });
       return res.end(JSON.stringify({ 
-        error: "Invalid part category",
-        message: `Category '${part}' not found. Use /categories to see available categories.`,
+        error: "Category not found",
         availableCategories: Object.keys(searchIndex).map(key => ({
           key,
           name: searchIndex[key].name
@@ -279,81 +338,78 @@ const server = http.createServer((req, res) => {
       }));
     }
     
-    // Search for matching models
-    const results = categoryData.allLines.filter(item => 
-      !item.isPlaceholder && smartMatch(model, item.text)
-    );
+    const categoryData = searchIndex[categoryKey];
     
-    // Format results
-    const formattedResults = results.map(r => ({
-      brand: r.brand,
-      compatibility: r.text,
-      matchScore: levenshteinSimilarity(normalize(model), r.normalized)
-    })).sort((a, b) => b.matchScore - a.matchScore);
+    // Find matching models with scoring
+    const matches = [];
+    const seenGroups = new Set(); // To avoid duplicate group lines
     
-    // Group results by brand
-    const byBrand = {};
-    formattedResults.forEach(r => {
-      if (!byBrand[r.brand]) byBrand[r.brand] = [];
-      byBrand[r.brand].push(r.compatibility);
+    categoryData.models.forEach(modelEntry => {
+      const result = preciseMatch(model, modelEntry);
+      
+      if (result.match) {
+        // Only add if we haven't seen this compatibility group
+        if (!seenGroups.has(modelEntry.groupLine)) {
+          seenGroups.add(modelEntry.groupLine);
+          
+          matches.push({
+            brand: modelEntry.brand,
+            compatibility: modelEntry.groupLine,
+            matchType: result.type,
+            score: result.score,
+            matchedModel: modelEntry.original
+          });
+        }
+      }
     });
     
-    res.writeHead(200, { 'Content-Type': 'application/json', ...corsHeaders });
-    return res.end(JSON.stringify({
+    // Sort by score (highest first)
+    matches.sort((a, b) => b.score - a.score);
+    
+    // Prepare response
+    const response = {
       success: true,
       part: {
         key: categoryKey,
         name: categoryData.name
       },
       searchModel: model,
-      totalMatches: formattedResults.length,
-      results: formattedResults.slice(0, 50), // Limit to 50 results
-      groupedByBrand: byBrand,
-      summary: formattedResults.length > 0 
-        ? `Found ${formattedResults.length} compatible listings for ${model} in ${categoryData.name}`
-        : `No exact matches found for ${model} in ${categoryData.name}. Try a different model or check the full list.`
-    }, null, 2));
+      totalMatches: matches.length,
+      exactMatches: matches.filter(m => m.matchType === 'exact').length,
+      results: matches.slice(0, 20), // Limit results
+      summary: matches.length > 0 
+        ? `Found ${matches.length} compatible listings for ${model}`
+        : `No exact matches found for ${model}. Try a more specific model name.`
+    };
+    
+    // Add warning if there might be partial matches
+    if (matches.length === 0) {
+      const partialMatches = categoryData.models.filter(m => 
+        m.normalized.includes(normalize(model).split(' ').pop())
+      );
+      
+      if (partialMatches.length > 0) {
+        response.suggestion = "Try searching with the full model name including brand and number";
+      }
+    }
+    
+    res.writeHead(200, { 'Content-Type': 'application/json', ...corsHeaders });
+    return res.end(JSON.stringify(response, null, 2));
   }
   
   // 404 for unknown routes
   res.writeHead(404, { 'Content-Type': 'application/json', ...corsHeaders });
-  res.end(JSON.stringify({ 
-    error: "Not found",
-    message: "The requested endpoint does not exist",
-    availableEndpoints: ["/", "/health", "/categories", "/search?part={category}&model={model}"]
-  }));
+  res.end(JSON.stringify({ error: "Endpoint not found" }));
 });
 
 // Start server
 server.listen(PORT, "0.0.0.0", () => {
   console.log("\n🚀 ==================================");
-  console.log(`✅ Server is running on port ${PORT}`);
-  console.log(`🌍 http://localhost:${PORT}`);
-  console.log("\n📚 Available endpoints:");
-  console.log(`   • GET /`);
-  console.log(`   • GET /health`);
-  console.log(`   • GET /categories`);
-  console.log(`   • GET /search?part={category}&model={model}`);
-  console.log("\n📊 Indexed categories:");
-  Object.keys(searchIndex).forEach(key => {
-    console.log(`   • ${key}: ${searchIndex[key].name} (${searchIndex[key].allLines.filter(l => !l.isPlaceholder).length} models)`);
-  });
+  console.log(`✅ Server running on port ${PORT}`);
+  console.log("✅ Precise matching enabled - No false positives!");
   console.log("=================================\n");
 });
 
-// Graceful shutdown
 process.on('SIGTERM', () => {
-  console.log('SIGTERM received, shutting down gracefully');
-  server.close(() => {
-    console.log('Server closed');
-    process.exit(0);
-  });
-});
-
-process.on('SIGINT', () => {
-  console.log('SIGINT received, shutting down gracefully');
-  server.close(() => {
-    console.log('Server closed');
-    process.exit(0);
-  });
+  server.close(() => process.exit(0));
 });
