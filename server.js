@@ -33,46 +33,7 @@ function normalize(text) {
     .trim();
 }
 
-// Helper function to extract model numbers/identifiers
-function extractModelIdentifiers(model) {
-  if (!model) return [];
-  
-  const normalized = normalize(model);
-  const identifiers = [];
-  
-  // Extract patterns like "note10", "a15", "11pro", "redmi9", etc.
-  const patterns = [
-    /([a-z]+)[-\s]*(\d+[a-z]*)/i,  // note10, a15, redmi9
-    /(\d+[a-z]*)[-\s]*([a-z]+)/i,   // 10pro, 11ultra
-    /([a-z]+)[-\s]*(\d+)[-\s]*([a-z]+)/i, // note10pro, redmi9prime
-  ];
-  
-  // Add the full normalized string
-  identifiers.push(normalized);
-  
-  // Extract alphanumeric sequences
-  const alnumMatches = normalized.match(/[a-z]+[\d]+|[\d]+[a-z]+|\d+/g) || [];
-  identifiers.push(...alnumMatches);
-  
-  // Extract brand + number combinations
-  const brands = ['redmi', 'mi', 'poco', 'samsung', 'galaxy', 'oppo', 'realme', 
-                  'vivo', 'iqoo', 'oneplus', 'nord', 'infinix', 'tecno', 'itel',
-                  'moto', 'motorola', 'lava', 'micromax', 'note', 'k', 'a', 'f', 'm'];
-  
-  brands.forEach(brand => {
-    if (normalized.includes(brand)) {
-      const regex = new RegExp(`${brand}[\\s-]*(\\d+[a-z]*)`, 'i');
-      const match = normalized.match(regex);
-      if (match) {
-        identifiers.push(match[0].replace(/\s+/g, ''));
-      }
-    }
-  });
-  
-  return [...new Set(identifiers)]; // Remove duplicates
-}
-
-// Function to create category key
+// Helper function to create URL-friendly keys from category names
 function createCategoryKey(categoryName) {
   if (!categoryName) return "";
   return categoryName
@@ -83,7 +44,7 @@ function createCategoryKey(categoryName) {
     .replace(/^_|_$/g, '');
 }
 
-// Build the search index with pre-processed data
+// Build the search index
 if (rawData.categories && Array.isArray(rawData.categories)) {
   rawData.categories.forEach(category => {
     if (!category || !category.name) return;
@@ -94,7 +55,7 @@ if (rawData.categories && Array.isArray(rawData.categories)) {
     searchIndex[categoryKey] = {
       name: category.name,
       brands: [],
-      models: [], // Store individual phone models, not full lines
+      models: [], // Store individual phone models
       originalLines: []
     };
 
@@ -114,7 +75,9 @@ if (rawData.categories && Array.isArray(rawData.categories)) {
             // Skip placeholder entries
             const isPlaceholder = modelLine.toLowerCase().includes('coming soon') || 
                                   modelLine.toLowerCase().includes('new list') ||
-                                  modelLine.toLowerCase().includes('universal');
+                                  modelLine.toLowerCase().includes('universal') ||
+                                  modelLine === '' ||
+                                  modelLine === ' ';
             
             if (isPlaceholder) return;
             
@@ -126,28 +89,48 @@ if (rawData.categories && Array.isArray(rawData.categories)) {
             });
             
             // Parse the line to extract individual models
-            // Lines are formatted like: "Model1 = Model2 = Model3 = Model4"
+            // Lines are formatted with "=" as separator
             if (modelLine.includes('=')) {
-              const models = modelLine.split('=').map(m => m.trim()).filter(m => m);
+              // Handle numbered lists like "7. Redmi Note 14 Pro Plus = ..."
+              let processedLine = modelLine;
               
-              brandInfo.compatibilityGroups.push({
-                originalLine: modelLine,
-                models: models
-              });
+              // Remove list numbers at the beginning (e.g., "7. " from "7. Redmi Note...")
+              const listNumberMatch = processedLine.match(/^\d+\.\s*(.+)/);
+              if (listNumberMatch) {
+                processedLine = listNumberMatch[1];
+              }
               
-              // Add each individual model to the models index
-              models.forEach(modelName => {
-                if (modelName && !modelName.toLowerCase().includes('coming')) {
-                  const normalizedModel = normalize(modelName);
-                  searchIndex[categoryKey].models.push({
-                    brand: brand.name,
-                    original: modelName,
-                    normalized: normalizedModel,
-                    groupLine: modelLine,
-                    identifiers: extractModelIdentifiers(normalizedModel)
-                  });
+              const models = processedLine.split('=').map(m => {
+                // Clean each model
+                let model = m.trim();
+                // Remove any remaining list numbers
+                const numMatch = model.match(/^\d+\.\s*(.+)/);
+                if (numMatch) {
+                  model = numMatch[1];
                 }
-              });
+                return model;
+              }).filter(m => m && !m.toLowerCase().includes('coming') && !m.toLowerCase().includes('new list'));
+              
+              if (models.length > 0) {
+                brandInfo.compatibilityGroups.push({
+                  originalLine: modelLine,
+                  models: models
+                });
+                
+                // Add each individual model to the models index
+                models.forEach(modelName => {
+                  if (modelName && !modelName.toLowerCase().includes('coming')) {
+                    const normalizedModel = normalize(modelName);
+                    searchIndex[categoryKey].models.push({
+                      brand: brand.name,
+                      original: modelName,
+                      normalized: normalizedModel,
+                      groupLine: modelLine,
+                      identifiers: extractModelIdentifiers(normalizedModel)
+                    });
+                  }
+                });
+              }
             } else {
               // Single model line
               const modelName = modelLine.trim();
@@ -175,71 +158,148 @@ if (rawData.categories && Array.isArray(rawData.categories)) {
   });
 }
 
-// Precise matching function - prioritizes exact matches
+// Helper function to extract model identifiers
+function extractModelIdentifiers(model) {
+  if (!model) return [];
+  
+  const identifiers = [];
+  
+  // Extract brand + number combinations
+  const brandPatterns = [
+    /(redmi|mi|poco)\s*(note)?\s*(\d+[a-z]*)/i,
+    /(samsung|galaxy)\s*([a-z]\d+)/i,
+    /(oppo|realme|oneplus)\s*([a-z]+\d+)/i,
+    /(vivo|iqoo)\s*([a-z]+\d+)/i,
+    /(infinix|tecno|itel)\s*([a-z]+\d+)/i,
+    /(moto|motorola|lava)\s*([a-z]+\d+)/i
+  ];
+  
+  brandPatterns.forEach(pattern => {
+    const match = model.match(pattern);
+    if (match) {
+      identifiers.push(match[0].replace(/\s+/g, '').toLowerCase());
+    }
+  });
+  
+  // Extract model numbers
+  const numberMatches = model.match(/[a-z]+\d+[a-z]*|\d+[a-z]+/g) || [];
+  numberMatches.forEach(m => identifiers.push(m.toLowerCase()));
+  
+  return [...new Set(identifiers)]; // Remove duplicates
+}
+
+// Precise matching function for your specific data structure
 function preciseMatch(searchModel, modelEntry) {
   if (!searchModel || !modelEntry) return { match: false, score: 0 };
   
   const cleanSearch = normalize(searchModel);
+  const cleanLine = modelEntry.normalized;
   
-  // EXACT MATCH (highest priority)
-  if (modelEntry.normalized === cleanSearch) {
-    return { match: true, score: 100, type: 'exact' };
-  }
+  // Split the line into individual models (using "=" as separator)
+  const models = cleanLine.split('=').map(m => m.trim()).filter(m => m);
   
-  // Check if search model is contained in the model entry as a whole word
-  const searchWords = cleanSearch.split(' ');
-  const modelWords = modelEntry.normalized.split(' ');
-  
-  // Check if ALL search words appear in the model entry in order
-  let allWordsMatch = true;
-  let lastIndex = -1;
-  
-  for (const word of searchWords) {
-    const index = modelWords.findIndex((w, i) => i > lastIndex && w.includes(word));
-    if (index === -1) {
-      allWordsMatch = false;
-      break;
-    }
-    lastIndex = index;
-  }
-  
-  if (allWordsMatch && searchWords.length > 1) {
-    return { match: true, score: 90, type: 'phrase' };
-  }
-  
-  // Check if this is a Redmi Note model and prevent false matches
-  if (cleanSearch.includes('note') && modelEntry.normalized.includes('note')) {
-    // Extract note numbers
-    const searchNoteMatch = cleanSearch.match(/note[\s-]*(\d+)/i);
-    const modelNoteMatch = modelEntry.normalized.match(/note[\s-]*(\d+)/i);
+  // Check each model in the compatibility list
+  for (const model of models) {
+    const cleanModel = normalize(model);
     
-    if (searchNoteMatch && modelNoteMatch) {
-      // If note numbers are different, it's NOT a match
-      if (searchNoteMatch[1] !== modelNoteMatch[1]) {
-        return { match: false, score: 0, type: 'note_mismatch' };
+    // EXACT MATCH (highest priority)
+    if (cleanModel === cleanSearch) {
+      return { match: true, score: 100, type: 'exact' };
+    }
+    
+    // Check if this is the exact model (ignoring spaces and special chars)
+    const searchWithoutSpaces = cleanSearch.replace(/\s+/g, '');
+    const modelWithoutSpaces = cleanModel.replace(/\s+/g, '');
+    
+    if (modelWithoutSpaces === searchWithoutSpaces) {
+      return { match: true, score: 95, type: 'exact_normalized' };
+    }
+    
+    // For Redmi Note models - require exact Note number and variant
+    if (cleanSearch.includes('note') && cleanModel.includes('note')) {
+      const searchNoteMatch = cleanSearch.match(/note[\s-]*(\d+)(?:\s*(pro|plus|max|ultra|lite|se|prime|pro\+|pro plus|pro max))?/i);
+      const modelNoteMatch = cleanModel.match(/note[\s-]*(\d+)(?:\s*(pro|plus|max|ultra|lite|se|prime|pro\+|pro plus|pro max))?/i);
+      
+      if (searchNoteMatch && modelNoteMatch) {
+        // Note numbers must match exactly
+        if (searchNoteMatch[1] !== modelNoteMatch[1]) {
+          continue; // Skip this model, note numbers don't match
+        }
+        
+        // Check if variants match (if specified in search)
+        if (searchNoteMatch[2] && modelNoteMatch[2]) {
+          // Both have variants, check if they match
+          const searchVariant = searchNoteMatch[2].replace(/\s+/g, '').toLowerCase();
+          const modelVariant = modelNoteMatch[2].replace(/\s+/g, '').toLowerCase();
+          
+          // Common variant mappings
+          const variantMap = {
+            'pro': ['pro'],
+            'proplus': ['proplus', 'proplus', 'pro+'],
+            'promax': ['promax', 'promax'],
+            'ultra': ['ultra'],
+            'lite': ['lite'],
+            'se': ['se'],
+            'prime': ['prime']
+          };
+          
+          // Check if variants match
+          let variantMatch = false;
+          for (const [key, values] of Object.entries(variantMap)) {
+            if (values.includes(searchVariant) && values.includes(modelVariant)) {
+              variantMatch = true;
+              break;
+            }
+          }
+          
+          if (variantMatch) {
+            return { match: true, score: 90, type: 'note_exact_variant' };
+          }
+        } else if (searchNoteMatch[2] && !modelNoteMatch[2]) {
+          // Search has variant but model doesn't - no match
+          continue;
+        } else if (!searchNoteMatch[2] && modelNoteMatch[2]) {
+          // Search is base model, model has variant - no match
+          continue;
+        }
+        
+        // If we get here, note numbers match and variants are compatible
+        return { match: true, score: 85, type: 'note_series' };
       }
     }
-  }
-  
-  // Check for exact identifier matches
-  const searchIdentifiers = extractModelIdentifiers(cleanSearch);
-  const modelIdentifiers = modelEntry.identifiers || [];
-  
-  // If ANY identifier matches exactly, it's a good match
-  for (const searchId of searchIdentifiers) {
-    for (const modelId of modelIdentifiers) {
-      if (searchId === modelId) {
-        return { match: true, score: 80, type: 'identifier_match' };
+    
+    // For Samsung models - require exact model number
+    if (cleanSearch.match(/[a-z]\d+/i)) {
+      const searchModelNum = cleanSearch.match(/[a-z]\d+/i)?.[0];
+      const modelNumMatch = cleanModel.match(/[a-z]\d+/i)?.[0];
+      
+      if (searchModelNum && modelNumMatch && searchModelNum !== modelNumMatch) {
+        continue; // Model numbers don't match
       }
     }
-  }
-  
-  // Check if model entry contains the exact search string
-  if (modelEntry.normalized.includes(cleanSearch)) {
-    // But prevent partial word matches (e.g., "note 5" matching "note 50")
-    const wordBoundaryCheck = new RegExp(`\\b${cleanSearch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`);
-    if (wordBoundaryCheck.test(modelEntry.normalized)) {
-      return { match: true, score: 70, type: 'contains_exact' };
+    
+    // Check if this model is part of a numbered list (e.g., "7. Redmi Note 14 Pro Plus")
+    const listItemMatch = model.match(/^\d+\.\s*(.+)/);
+    if (listItemMatch) {
+      const listItemModel = normalize(listItemMatch[1]);
+      if (listItemModel === cleanSearch || listItemModel.replace(/\s+/g, '') === searchWithoutSpaces) {
+        return { match: true, score: 90, type: 'list_item' };
+      }
+    }
+    
+    // Check if search model is a subset with matching identifiers
+    const searchIdentifiers = extractModelIdentifiers(cleanSearch);
+    const modelIdentifiers = extractModelIdentifiers(cleanModel);
+    
+    for (const searchId of searchIdentifiers) {
+      for (const modelId of modelIdentifiers) {
+        if (searchId === modelId) {
+          // Verify it's not a partial match
+          if (cleanModel.includes(cleanSearch) || cleanSearch.includes(cleanModel)) {
+            return { match: true, score: 80, type: 'identifier_match' };
+          }
+        }
+      }
     }
   }
   
@@ -268,24 +328,20 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'application/json', ...corsHeaders });
     return res.end(JSON.stringify({
       name: "Universal Parts API",
-      version: "2.0.0",
+      version: "3.0.0",
       status: "running",
       features: {
         exactMatching: true,
-        noFalsePositives: true,
-        noteModelValidation: true
+        noteValidation: true,
+        variantAware: true,
+        brandSeparation: true
       },
       endpoints: {
         "/": "This information",
         "/search?part={category}&model={model}": "Search for compatible parts",
         "/categories": "List all available part categories",
         "/health": "Health check endpoint"
-      },
-      categories: Object.keys(searchIndex).map(key => ({
-        key,
-        name: searchIndex[key].name,
-        modelCount: searchIndex[key].models.length
-      }))
+      }
     }, null, 2));
   }
   
@@ -375,23 +431,12 @@ const server = http.createServer((req, res) => {
       },
       searchModel: model,
       totalMatches: matches.length,
-      exactMatches: matches.filter(m => m.matchType === 'exact').length,
+      exactMatches: matches.filter(m => m.score >= 95).length,
       results: matches.slice(0, 20), // Limit results
       summary: matches.length > 0 
         ? `Found ${matches.length} compatible listings for ${model}`
         : `No exact matches found for ${model}. Try a more specific model name.`
     };
-    
-    // Add warning if there might be partial matches
-    if (matches.length === 0) {
-      const partialMatches = categoryData.models.filter(m => 
-        m.normalized.includes(normalize(model).split(' ').pop())
-      );
-      
-      if (partialMatches.length > 0) {
-        response.suggestion = "Try searching with the full model name including brand and number";
-      }
-    }
     
     res.writeHead(200, { 'Content-Type': 'application/json', ...corsHeaders });
     return res.end(JSON.stringify(response, null, 2));
@@ -407,9 +452,32 @@ server.listen(PORT, "0.0.0.0", () => {
   console.log("\n🚀 ==================================");
   console.log(`✅ Server running on port ${PORT}`);
   console.log("✅ Precise matching enabled - No false positives!");
+  console.log("✅ Note series validation active");
+  console.log("✅ Variant-aware matching (Pro, Plus, Lite, etc.)");
+  console.log(`✅ Indexed ${Object.keys(searchIndex).length} categories`);
+  
+  // Count total models
+  let totalModels = 0;
+  Object.keys(searchIndex).forEach(key => {
+    totalModels += searchIndex[key].models.length;
+  });
+  console.log(`✅ Total models indexed: ${totalModels}`);
   console.log("=================================\n");
 });
 
+// Graceful shutdown
 process.on('SIGTERM', () => {
-  server.close(() => process.exit(0));
+  console.log('SIGTERM received, shutting down gracefully');
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT received, shutting down gracefully');
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
 });
