@@ -1,7 +1,6 @@
-const express = require("express");
+const http = require("http");
 const fs = require("fs");
 
-const app = express();
 const PORT = process.env.PORT || 3000;
 
 const data = JSON.parse(fs.readFileSync("./data.json", "utf8"));
@@ -14,7 +13,7 @@ function normalize(text) {
     .trim();
 }
 
-// Build fast index at startup
+// Build fast index
 const index = {};
 
 data.categories.forEach(category => {
@@ -27,50 +26,56 @@ data.categories.forEach(category => {
   });
 });
 
-// Smart search (includes typo tolerance)
 function smartMatch(model, line) {
   const cleanModel = normalize(model);
   const cleanLine = normalize(line);
 
   if (cleanLine.includes(cleanModel)) return true;
 
-  // Partial fallback match (first 70%)
   const partial = cleanModel.slice(0, Math.floor(cleanModel.length * 0.7));
   return cleanLine.includes(partial);
 }
 
-app.get("/search", (req, res) => {
-  const { part, model } = req.query;
+const server = http.createServer((req, res) => {
+  const url = new URL(req.url, `http://${req.headers.host}`);
 
-  if (!part || !model) {
-    return res.json({ error: "part and model required" });
+  if (url.pathname === "/search") {
+    const part = url.searchParams.get("part");
+    const model = url.searchParams.get("model");
+
+    if (!part || !model) {
+      res.writeHead(400, { "Content-Type": "application/json" });
+      return res.end(JSON.stringify({ error: "part and model required" }));
+    }
+
+    const categoryData = index[part];
+
+    if (!categoryData) {
+      res.writeHead(400, { "Content-Type": "application/json" });
+      return res.end(JSON.stringify({ error: "Invalid part category" }));
+    }
+
+    const results = categoryData.filter(line =>
+      smartMatch(model, line)
+    );
+
+    res.writeHead(200, { "Content-Type": "application/json" });
+
+    if (results.length === 0) {
+      return res.end(JSON.stringify({ message: "No universal match found" }));
+    }
+
+    return res.end(JSON.stringify({
+      part,
+      model,
+      results
+    }));
   }
 
-  const categoryData = index[part];
-
-  if (!categoryData) {
-    return res.json({ error: "Invalid part category" });
-  }
-
-  const results = categoryData.filter(line =>
-    smartMatch(model, line)
-  );
-
-  if (results.length === 0) {
-    return res.json({ message: "No universal match found" });
-  }
-
-  res.json({
-    part,
-    model,
-    results
-  });
+  res.writeHead(200, { "Content-Type": "text/plain" });
+  res.end("Universal Parts API Production Ready 🚀");
 });
 
-app.get("/", (req, res) => {
-  res.send("Universal Parts API Production Ready 🚀");
-});
-
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+server.listen(PORT, () => {
+  console.log("Server running on port " + PORT);
 });
