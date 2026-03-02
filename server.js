@@ -3,8 +3,7 @@ const fs = require("fs");
 const path = require("path");
 
 const PORT = process.env.PORT || 8000;
-// 🔐 ADDED FOR LOGGING: Secret key for private stats
-const SECRET_KEY = "munax_admin_2026"; // Change this to your own secret!
+const SECRET_KEY = "munax_admin_2026"; // 🔐 Change this!
 
 // Load and parse the JSON data
 let rawData = { categories: [] };
@@ -91,21 +90,15 @@ if (rawData.categories && Array.isArray(rawData.categories)) {
             });
             
             // Parse the line to extract individual models
-            // Lines are formatted with "=" as separator
             if (modelLine.includes('=')) {
-              // Handle numbered lists like "7. Redmi Note 14 Pro Plus = ..."
               let processedLine = modelLine;
-              
-              // Remove list numbers at the beginning (e.g., "7. " from "7. Redmi Note...")
               const listNumberMatch = processedLine.match(/^\d+\.\s*(.+)/);
               if (listNumberMatch) {
                 processedLine = listNumberMatch[1];
               }
               
               const models = processedLine.split('=').map(m => {
-                // Clean each model
                 let model = m.trim();
-                // Remove any remaining list numbers
                 const numMatch = model.match(/^\d+\.\s*(.+)/);
                 if (numMatch) {
                   model = numMatch[1];
@@ -119,7 +112,6 @@ if (rawData.categories && Array.isArray(rawData.categories)) {
                   models: models
                 });
                 
-                // Add each individual model to the models index
                 models.forEach(modelName => {
                   if (modelName && !modelName.toLowerCase().includes('coming')) {
                     const normalizedModel = normalize(modelName);
@@ -134,7 +126,6 @@ if (rawData.categories && Array.isArray(rawData.categories)) {
                 });
               }
             } else {
-              // Single model line
               const modelName = modelLine.trim();
               if (modelName && !modelName.toLowerCase().includes('coming')) {
                 const normalizedModel = normalize(modelName);
@@ -166,7 +157,6 @@ function extractModelIdentifiers(model) {
   
   const identifiers = [];
   
-  // Extract brand + number combinations
   const brandPatterns = [
     /(redmi|mi|poco)\s*(note)?\s*(\d+[a-z]*)/i,
     /(samsung|galaxy)\s*([a-z]\d+)/i,
@@ -183,33 +173,27 @@ function extractModelIdentifiers(model) {
     }
   });
   
-  // Extract model numbers
   const numberMatches = model.match(/[a-z]+\d+[a-z]*|\d+[a-z]+/g) || [];
   numberMatches.forEach(m => identifiers.push(m.toLowerCase()));
   
-  return [...new Set(identifiers)]; // Remove duplicates
+  return [...new Set(identifiers)];
 }
 
-// Precise matching function for your specific data structure
+// Precise matching function
 function preciseMatch(searchModel, modelEntry) {
   if (!searchModel || !modelEntry) return { match: false, score: 0 };
   
   const cleanSearch = normalize(searchModel);
   const cleanLine = modelEntry.normalized;
-  
-  // Split the line into individual models (using "=" as separator)
   const models = cleanLine.split('=').map(m => m.trim()).filter(m => m);
   
-  // Check each model in the compatibility list
   for (const model of models) {
     const cleanModel = normalize(model);
     
-    // EXACT MATCH (highest priority)
     if (cleanModel === cleanSearch) {
       return { match: true, score: 100, type: 'exact' };
     }
     
-    // Check if this is the exact model (ignoring spaces and special chars)
     const searchWithoutSpaces = cleanSearch.replace(/\s+/g, '');
     const modelWithoutSpaces = cleanModel.replace(/\s+/g, '');
     
@@ -217,24 +201,18 @@ function preciseMatch(searchModel, modelEntry) {
       return { match: true, score: 95, type: 'exact_normalized' };
     }
     
-    // For Redmi Note models - require exact Note number and variant
+    // Redmi Note matching logic
     if (cleanSearch.includes('note') && cleanModel.includes('note')) {
       const searchNoteMatch = cleanSearch.match(/note[\s-]*(\d+)(?:\s*(pro|plus|max|ultra|lite|se|prime|pro\+|pro plus|pro max))?/i);
       const modelNoteMatch = cleanModel.match(/note[\s-]*(\d+)(?:\s*(pro|plus|max|ultra|lite|se|prime|pro\+|pro plus|pro max))?/i);
       
       if (searchNoteMatch && modelNoteMatch) {
-        // Note numbers must match exactly
-        if (searchNoteMatch[1] !== modelNoteMatch[1]) {
-          continue; // Skip this model, note numbers don't match
-        }
+        if (searchNoteMatch[1] !== modelNoteMatch[1]) continue;
         
-        // Check if variants match (if specified in search)
         if (searchNoteMatch[2] && modelNoteMatch[2]) {
-          // Both have variants, check if they match
           const searchVariant = searchNoteMatch[2].replace(/\s+/g, '').toLowerCase();
           const modelVariant = modelNoteMatch[2].replace(/\s+/g, '').toLowerCase();
           
-          // Common variant mappings
           const variantMap = {
             'pro': ['pro'],
             'proplus': ['proplus', 'proplus', 'pro+'],
@@ -245,7 +223,6 @@ function preciseMatch(searchModel, modelEntry) {
             'prime': ['prime']
           };
           
-          // Check if variants match
           let variantMatch = false;
           for (const [key, values] of Object.entries(variantMap)) {
             if (values.includes(searchVariant) && values.includes(modelVariant)) {
@@ -254,33 +231,25 @@ function preciseMatch(searchModel, modelEntry) {
             }
           }
           
-          if (variantMatch) {
-            return { match: true, score: 90, type: 'note_exact_variant' };
-          }
+          if (variantMatch) return { match: true, score: 90, type: 'note_exact_variant' };
         } else if (searchNoteMatch[2] && !modelNoteMatch[2]) {
-          // Search has variant but model doesn't - no match
           continue;
         } else if (!searchNoteMatch[2] && modelNoteMatch[2]) {
-          // Search is base model, model has variant - no match
           continue;
         }
         
-        // If we get here, note numbers match and variants are compatible
         return { match: true, score: 85, type: 'note_series' };
       }
     }
     
-    // For Samsung models - require exact model number
+    // Samsung models
     if (cleanSearch.match(/[a-z]\d+/i)) {
       const searchModelNum = cleanSearch.match(/[a-z]\d+/i)?.[0];
       const modelNumMatch = cleanModel.match(/[a-z]\d+/i)?.[0];
       
-      if (searchModelNum && modelNumMatch && searchModelNum !== modelNumMatch) {
-        continue; // Model numbers don't match
-      }
+      if (searchModelNum && modelNumMatch && searchModelNum !== modelNumMatch) continue;
     }
     
-    // Check if this model is part of a numbered list (e.g., "7. Redmi Note 14 Pro Plus")
     const listItemMatch = model.match(/^\d+\.\s*(.+)/);
     if (listItemMatch) {
       const listItemModel = normalize(listItemMatch[1]);
@@ -289,14 +258,12 @@ function preciseMatch(searchModel, modelEntry) {
       }
     }
     
-    // Check if search model is a subset with matching identifiers
     const searchIdentifiers = extractModelIdentifiers(cleanSearch);
     const modelIdentifiers = extractModelIdentifiers(cleanModel);
     
     for (const searchId of searchIdentifiers) {
       for (const modelId of modelIdentifiers) {
         if (searchId === modelId) {
-          // Verify it's not a partial match
           if (cleanModel.includes(cleanSearch) || cleanSearch.includes(cleanModel)) {
             return { match: true, score: 80, type: 'identifier_match' };
           }
@@ -308,11 +275,14 @@ function preciseMatch(searchModel, modelEntry) {
   return { match: false, score: 0 };
 }
 
-// 🔐 ADDED FOR LOGGING: Log file path
-const LOG_FILE = path.join(__dirname, "search_logs.jsonl");
+// ========== DAILY LOGGING SYSTEM ==========
+const LOG_DIR = path.join(__dirname, "logs");
+if (!fs.existsSync(LOG_DIR)) fs.mkdirSync(LOG_DIR);
 
-// 🔐 ADDED FOR LOGGING: Helper to log searches
 function logSearch(part, model, resultCount, ip, userAgent) {
+  const today = new Date().toISOString().split('T')[0];
+  const todayLogFile = path.join(LOG_DIR, `logs_${today}.jsonl`);
+  
   const entry = {
     timestamp: new Date().toISOString(),
     part,
@@ -321,25 +291,46 @@ function logSearch(part, model, resultCount, ip, userAgent) {
     ip: ip || "unknown",
     userAgent: userAgent || "unknown"
   };
-  fs.appendFile(LOG_FILE, JSON.stringify(entry) + "\n", (err) => {
+  
+  fs.appendFile(todayLogFile, JSON.stringify(entry) + "\n", (err) => {
     if (err) console.error("Failed to write log:", err);
   });
+  
+  // Auto-delete yesterday's log
+  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+  const yesterdayLogFile = path.join(LOG_DIR, `logs_${yesterday}.jsonl`);
+  if (fs.existsSync(yesterdayLogFile)) {
+    fs.unlink(yesterdayLogFile, (err) => {
+      if (err) console.error("Failed to delete yesterday's log:", err);
+    });
+  }
 }
 
-// 🔐 ADDED FOR LOGGING: Helper to read and aggregate logs
 function getStats() {
-  if (!fs.existsSync(LOG_FILE)) return { total: 0, byModel: {}, byPart: {}, recent: [] };
-  const logs = fs.readFileSync(LOG_FILE, "utf8").split("\n").filter(Boolean).map(line => JSON.parse(line));
+  const today = new Date().toISOString().split('T')[0];
+  const todayLogFile = path.join(LOG_DIR, `logs_${today}.jsonl`);
+  
+  if (!fs.existsSync(todayLogFile)) {
+    return { total: 0, byModel: {}, byPart: {}, recent: [] };
+  }
+  
+  const logs = fs.readFileSync(todayLogFile, "utf8")
+    .split("\n")
+    .filter(Boolean)
+    .map(line => JSON.parse(line));
+  
   const stats = {
     total: logs.length,
     byModel: {},
     byPart: {},
-    recent: logs.slice(-50).reverse() // last 50 searches, newest first
+    recent: logs.slice(-50).reverse()
   };
+  
   logs.forEach(log => {
     stats.byModel[log.model] = (stats.byModel[log.model] || 0) + 1;
     stats.byPart[log.part] = (stats.byPart[log.part] || 0) + 1;
   });
+  
   return stats;
 }
 
@@ -354,13 +345,12 @@ const corsHeaders = {
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   
-  // Handle preflight requests
   if (req.method === 'OPTIONS') {
     res.writeHead(204, corsHeaders);
     return res.end();
   }
 
-  // 🔐 ADDED FOR LOGGING: Secret stats endpoint
+  // Secret stats endpoint
   if (url.pathname === "/admin/stats") {
     const key = url.searchParams.get("key");
     if (key !== SECRET_KEY) {
@@ -377,12 +367,9 @@ const server = http.createServer((req, res) => {
     }
   }
   
-  // ============= DASHBOARD ROUTE (HTML UI) =============
+  // Dashboard route
   if (url.pathname === "/" || url.pathname === "/dashboard") {
-    // Read and serve the dashboard HTML
     const dashboardPath = path.join(__dirname, 'dashboard.html');
-    
-    // Check if dashboard.html exists
     if (fs.existsSync(dashboardPath)) {
       try {
         const dashboardHtml = fs.readFileSync(dashboardPath, 'utf8');
@@ -394,7 +381,6 @@ const server = http.createServer((req, res) => {
         return res.end('Dashboard file error');
       }
     } else {
-      // If dashboard.html doesn't exist, serve a simple message
       res.writeHead(200, { 'Content-Type': 'text/html' });
       return res.end(`
         <!DOCTYPE html>
@@ -474,7 +460,6 @@ const server = http.createServer((req, res) => {
       }));
     }
     
-    // Find matching category
     const categoryKey = Object.keys(searchIndex).find(key => 
       key.includes(part.toLowerCase().replace(/[^a-z0-9]/g, '_')) ||
       searchIndex[key]?.name.toLowerCase().includes(part.toLowerCase())
@@ -493,16 +478,13 @@ const server = http.createServer((req, res) => {
     }
     
     const categoryData = searchIndex[categoryKey];
-    
-    // Find matching models with scoring
     const matches = [];
-    const seenGroups = new Set(); // To avoid duplicate group lines
+    const seenGroups = new Set();
     
     categoryData.models.forEach(modelEntry => {
       const result = preciseMatch(model, modelEntry);
       
       if (result.match) {
-        // Only add if we haven't seen this compatibility group
         if (!seenGroups.has(modelEntry.groupLine)) {
           seenGroups.add(modelEntry.groupLine);
           
@@ -517,10 +499,8 @@ const server = http.createServer((req, res) => {
       }
     });
     
-    // Sort by score (highest first)
     matches.sort((a, b) => b.score - a.score);
     
-    // Prepare response
     const response = {
       success: true,
       part: {
@@ -530,14 +510,14 @@ const server = http.createServer((req, res) => {
       searchModel: model,
       totalMatches: matches.length,
       exactMatches: matches.filter(m => m.score >= 95).length,
-      results: matches.slice(0, 20), // Limit results
+      results: matches.slice(0, 20),
       summary: matches.length > 0 
         ? `Found ${matches.length} compatible listings for ${model}`
         : `No exact matches found for ${model}. Try a more specific model name.`,
       watermark: "Created by Munax"
     };
 
-    // 🔐 ADDED FOR LOGGING: Log this search
+    // Log this search
     const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
     const ua = req.headers['user-agent'];
     logSearch(part, model, matches.length, ip, ua);
@@ -546,7 +526,6 @@ const server = http.createServer((req, res) => {
     return res.end(JSON.stringify(response, null, 2));
   }
   
-  // 404 for unknown routes
   res.writeHead(404, { 'Content-Type': 'application/json', ...corsHeaders });
   res.end(JSON.stringify({ 
     error: "Endpoint not found",
@@ -559,19 +538,15 @@ server.listen(PORT, "0.0.0.0", () => {
   console.log("\n🚀 ==================================");
   console.log(`✅ Server running on port ${PORT}`);
   console.log(`🔐 Stats endpoint: /admin/stats?key=${SECRET_KEY}`);
+  console.log(`📁 Logs stored in: /logs/ folder (auto-clears daily)`);
   console.log("✅ Precise matching enabled - No false positives!");
-  console.log("✅ Note series validation active");
-  console.log("✅ Variant-aware matching (Pro, Plus, Lite, etc.)");
   console.log(`✅ Indexed ${Object.keys(searchIndex).length} categories`);
   
-  // Count total models
   let totalModels = 0;
   Object.keys(searchIndex).forEach(key => {
     totalModels += searchIndex[key].models.length;
   });
   console.log(`✅ Total models indexed: ${totalModels}`);
-  console.log("✅ Dashboard available at / or /dashboard");
-  console.log("✅ API endpoints at /api, /search, /categories, /health");
   console.log("=================================\n");
 });
 
