@@ -3,6 +3,8 @@ const fs = require("fs");
 const path = require("path");
 
 const PORT = process.env.PORT || 8000;
+// 🔐 ADDED FOR LOGGING: Secret key for private stats
+const SECRET_KEY = "munax_admin_2026"; // Change this to your own secret!
 
 // Load and parse the JSON data
 let rawData = { categories: [] };
@@ -306,6 +308,41 @@ function preciseMatch(searchModel, modelEntry) {
   return { match: false, score: 0 };
 }
 
+// 🔐 ADDED FOR LOGGING: Log file path
+const LOG_FILE = path.join(__dirname, "search_logs.jsonl");
+
+// 🔐 ADDED FOR LOGGING: Helper to log searches
+function logSearch(part, model, resultCount, ip, userAgent) {
+  const entry = {
+    timestamp: new Date().toISOString(),
+    part,
+    model,
+    resultCount,
+    ip: ip || "unknown",
+    userAgent: userAgent || "unknown"
+  };
+  fs.appendFile(LOG_FILE, JSON.stringify(entry) + "\n", (err) => {
+    if (err) console.error("Failed to write log:", err);
+  });
+}
+
+// 🔐 ADDED FOR LOGGING: Helper to read and aggregate logs
+function getStats() {
+  if (!fs.existsSync(LOG_FILE)) return { total: 0, byModel: {}, byPart: {}, recent: [] };
+  const logs = fs.readFileSync(LOG_FILE, "utf8").split("\n").filter(Boolean).map(line => JSON.parse(line));
+  const stats = {
+    total: logs.length,
+    byModel: {},
+    byPart: {},
+    recent: logs.slice(-50).reverse() // last 50 searches, newest first
+  };
+  logs.forEach(log => {
+    stats.byModel[log.model] = (stats.byModel[log.model] || 0) + 1;
+    stats.byPart[log.part] = (stats.byPart[log.part] || 0) + 1;
+  });
+  return stats;
+}
+
 // CORS headers
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -321,6 +358,23 @@ const server = http.createServer((req, res) => {
   if (req.method === 'OPTIONS') {
     res.writeHead(204, corsHeaders);
     return res.end();
+  }
+
+  // 🔐 ADDED FOR LOGGING: Secret stats endpoint
+  if (url.pathname === "/admin/stats") {
+    const key = url.searchParams.get("key");
+    if (key !== SECRET_KEY) {
+      res.writeHead(403, { "Content-Type": "application/json", ...corsHeaders });
+      return res.end(JSON.stringify({ error: "Forbidden" }));
+    }
+    try {
+      const stats = getStats();
+      res.writeHead(200, { "Content-Type": "application/json", ...corsHeaders });
+      return res.end(JSON.stringify(stats, null, 2));
+    } catch (err) {
+      res.writeHead(500, { "Content-Type": "application/json", ...corsHeaders });
+      return res.end(JSON.stringify({ error: "Internal error" }));
+    }
   }
   
   // ============= DASHBOARD ROUTE (HTML UI) =============
@@ -480,8 +534,13 @@ const server = http.createServer((req, res) => {
       summary: matches.length > 0 
         ? `Found ${matches.length} compatible listings for ${model}`
         : `No exact matches found for ${model}. Try a more specific model name.`,
-      watermark: "Created by Munax" // 👈 Watermark at the bottom
+      watermark: "Created by Munax"
     };
+
+    // 🔐 ADDED FOR LOGGING: Log this search
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    const ua = req.headers['user-agent'];
+    logSearch(part, model, matches.length, ip, ua);
     
     res.writeHead(200, { 'Content-Type': 'application/json', ...corsHeaders });
     return res.end(JSON.stringify(response, null, 2));
@@ -499,6 +558,7 @@ const server = http.createServer((req, res) => {
 server.listen(PORT, "0.0.0.0", () => {
   console.log("\n🚀 ==================================");
   console.log(`✅ Server running on port ${PORT}`);
+  console.log(`🔐 Stats endpoint: /admin/stats?key=${SECRET_KEY}`);
   console.log("✅ Precise matching enabled - No false positives!");
   console.log("✅ Note series validation active");
   console.log("✅ Variant-aware matching (Pro, Plus, Lite, etc.)");
