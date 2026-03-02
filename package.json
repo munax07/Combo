@@ -1,16 +1,13 @@
 {
-  "name": "universal-parts-api",
-  "version": "1.0.0",
-  "description": "API for searching mobile phone spare parts compatibility",
+  "name": "uniparts-api",
+  "version": "4.1.0",
+  "description": "Universal Parts Database API",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js"
+    "start": "node server.js"
   },
-  "engines": {
-    "node": ">=18.0.0"
-  },
-  "keywords": ["mobile", "parts", "api", "spare-parts"],
-  "author": "",
-  "license": "MIT"
+  "dependencies": {
+    "axios": "^1.6.2",
+    "cheerio": "^1.0.0-rc.12"
+  }
 }
