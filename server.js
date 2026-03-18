@@ -10,7 +10,7 @@
 //   § 5  Logging
 //   § 6  Text & Utility Helpers
 //   § 7  Search Index (build + auto-reload)
-//   § 8  Precise Matching Engine
+//   § 8  Precise Matching Engine (FIXED)
 //   § 9  GSMArena Fetch with Retry
 //   § 10 HTTP Helpers (sendJson, gzip, request context)
 //   § 11 Route Handlers
@@ -341,8 +341,6 @@ function getIp(req) {
 // § 7  SEARCH INDEX  (build + live auto-reload)
 //   currentIndex is swapped atomically — in-flight requests finish against
 //   the old index; new requests immediately use the updated one.
-//   Note: fs.watch is not 100% reliable on all platforms; if you experience
-//   missed updates, consider adding a polling fallback (see commented code).
 // ───────────────────────────────────────────────────────────────────────────
 
 let currentIndex = {};
@@ -435,7 +433,7 @@ function loadAndBuildIndex() {
   }
 }
 
-// Auto-reload: debounced fs.watch so rapid file saves don't thrash
+// Auto-reload: debounced fs.watch so rapid file saves don’t thrash
 let _reloadDebounce = null;
 
 function reloadData() {
@@ -460,15 +458,14 @@ function watchDataFile() {
       }, 500); // 500 ms debounce: wait for the file write to complete
     });
     console.log("👁️  Watching data.json for live changes");
-    // Optional polling fallback for platforms where fs.watch is unreliable:
-    // setInterval(() => { if (fs.statSync(DATA_PATH).mtimeMs > lastMtime) reloadData(); }, 5000);
   } catch (err) {
     console.warn("⚠️  Could not watch data.json:", err.message);
   }
 }
 
 // ───────────────────────────────────────────────────────────────────────────
-// § 8  PRECISE MATCHING ENGINE
+// § 8  PRECISE MATCHING ENGINE (FIXED)
+//   Now correctly matches "Realme 6" inside longer compatibility chains.
 // ───────────────────────────────────────────────────────────────────────────
 
 function sameVariant(a, b) {
@@ -483,53 +480,62 @@ function sameVariant(a, b) {
 function preciseMatch(searchModel, modelEntry) {
   if (!searchModel || !modelEntry) return { match: false, score: 0 };
 
-  const cs         = normalize(searchModel);
-  const candidates = modelEntry.normalized.split("=").map(m => m.trim()).filter(Boolean);
+  const cleanSearch = normalize(searchModel);
+  const candidates = modelEntry.normalized.split('=').map(m => m.trim()).filter(Boolean);
 
-  for (const cand of candidates) {
-    const cc = normalize(cand);
+  for (const candidate of candidates) {
+    const cleanCandidate = normalize(candidate);
 
-    // 1. Exact string match
-    if (cc === cs)
-      return { match: true, score: 100, type: "exact" };
+    // 1. Exact match
+    if (cleanCandidate === cleanSearch) {
+      return { match: true, score: 100, type: 'exact' };
+    }
 
-    // 2. Match ignoring all spaces  (e.g. "Note10" === "Note 10")
-    if (cc.replace(/\s+/g, "") === cs.replace(/\s+/g, ""))
-      return { match: true, score: 95, type: "exact_normalized" };
+    // 2. Whole-word containment (for longer chains)
+    const wordBoundaryRegex = new RegExp(`\\b${cleanSearch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`);
+    if (wordBoundaryRegex.test(cleanCandidate)) {
+      return { match: true, score: 95, type: 'contained_in_chain' };
+    }
 
-    // 3. Note-series smart matching
-    if (cs.includes("note") && cc.includes("note")) {
+    // 3. Candidate is a subset of search (e.g., "6" in "Realme 6")
+    if (cleanSearch.includes(cleanCandidate) && cleanCandidate.length > 3) {
+      return { match: true, score: 90, type: 'candidate_subset' };
+    }
+
+    // 4. Note-series smart matching
+    if (cleanSearch.includes('note') && cleanCandidate.includes('note')) {
       const NOTE_RE = /note[\s-]*(\d+)(?:\s*(pro\+?|pro\s*plus|pro\s*max|pro|plus|max|ultra|lite|se|prime))?/i;
-      const sn = cs.match(NOTE_RE);
-      const mn = cc.match(NOTE_RE);
+      const sn = cleanSearch.match(NOTE_RE);
+      const mn = cleanCandidate.match(NOTE_RE);
       if (sn && mn) {
-        if (sn[1] !== mn[1]) continue;                                    // different series number
-        if (sn[2] && mn[2] && !sameVariant(sn[2], mn[2])) continue;      // mismatched variants
-        if (Boolean(sn[2]) !== Boolean(mn[2])) continue;                  // one has variant, other doesn't
+        if (sn[1] !== mn[1]) continue;
+        if (sn[2] && mn[2] && !sameVariant(sn[2], mn[2])) continue;
+        if (Boolean(sn[2]) !== Boolean(mn[2])) continue;
         return { match: true, score: sn[2] ? 90 : 85,
-                 type: sn[2] ? "note_exact_variant" : "note_series" };
+                 type: sn[2] ? 'note_exact_variant' : 'note_series' };
       }
     }
 
-    // 4. Samsung/Xiaomi-style model-number guard  (A55 ≠ A35, Redmi 12 ≠ Redmi 12C)
-    const sNum = cs.match(/\b[a-z]\d+\b/i)?.[0]?.toLowerCase();
-    const cNum = cc.match(/\b[a-z]\d+\b/i)?.[0]?.toLowerCase();
+    // 5. Model-number guard
+    const sNum = cleanSearch.match(/\b[a-z]\d+\b/i)?.[0]?.toLowerCase();
+    const cNum = cleanCandidate.match(/\b[a-z]\d+\b/i)?.[0]?.toLowerCase();
     if (sNum && cNum && sNum !== cNum) continue;
 
-    // 5. Strip leading list-item numbers  ("3. Redmi 12" → "Redmi 12")
-    const stripped = cand.match(/^\d+\.\s*(.+)/)?.[1];
+    // 6. Strip leading list numbers
+    const stripped = candidate.match(/^\d+\.\s*(.+)/)?.[1];
     if (stripped) {
       const ns = normalize(stripped);
-      if (ns === cs || ns.replace(/\s+/g, "") === cs.replace(/\s+/g, ""))
-        return { match: true, score: 90, type: "list_item" };
+      if (ns === cleanSearch || ns.replace(/\s+/g, '') === cleanSearch.replace(/\s+/g, ''))
+        return { match: true, score: 90, type: 'list_item' };
     }
 
-    // 6. Identifier fallback  (last resort — requires containment to reduce false positives)
-    const si = extractModelIdentifiers(cs);
-    const mi = extractModelIdentifiers(cc);
+    // 7. Identifier fallback
+    const si = extractModelIdentifiers(cleanSearch);
+    const mi = extractModelIdentifiers(cleanCandidate);
     for (const s of si) for (const m of mi) {
-      if (s === m && (cc.includes(cs) || cs.includes(cc)))
-        return { match: true, score: 80, type: "identifier_match" };
+      if (s === m) {
+        return { match: true, score: 80, type: 'identifier_match' };
+      }
     }
   }
 
