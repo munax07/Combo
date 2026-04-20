@@ -64,9 +64,9 @@ function cleanModel(s) {
 
 function createCategoryKey(name) {
   return name.toLowerCase()
-    .replace(/^\d+\.\s*/, "")          // remove leading "1. "
-    .replace(/[^a-z0-9]+/g, "_")       // special chars → underscore
-    .replace(/^_|_$/g, "");            // trim underscores
+    .replace(/^\d+\.\s*/, "")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_|_$/g, "");
 }
 
 // ==================== RATE LIMITER ====================
@@ -380,7 +380,6 @@ const server = http.createServer(async (req, res) => {
     if (!part || !model) {
       return sendJson(res, req, 400, { error: "Missing 'part' or 'model' parameters" }, start);
     }
-    // Resolve category key
     let categoryKey = null;
     if (searchIndex[part]) {
       categoryKey = part;
@@ -531,7 +530,7 @@ try {
   server.listen(PORT, "0.0.0.0", () => {
     const totalModels = Object.values(searchIndex).reduce((s, c) => s + c.models.length, 0);
     console.log("\n🚀 ════════════════════════════════════════════════");
-    console.log("   UNIPARTS PRO  ·  ULTRA PEAK FINAL BOSS");
+    console.log("   UNIPARTS PRO  ·  ULTRA PRO MAX FINAL BOSS");
     console.log(`   🌐 Port          : ${PORT}`);
     console.log(`   🌍 Environment   : ${NODE_ENV}`);
     console.log(`   📦 Categories    : ${Object.keys(searchIndex).length}`);
