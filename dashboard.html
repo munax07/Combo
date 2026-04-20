@@ -1,562 +1,803 @@
-"use strict";
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>UNIPARTS · NEURAL SCAN</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-const http = require("http");
-const fs = require("fs");
-const path = require("path");
-const zlib = require("zlib");
-const axios = require("axios");
-const cheerio = require("cheerio");
+    :root {
+      --bg-deep: #070b12;
+      --glass-bg: rgba(15, 25, 35, 0.65);
+      --glass-edge: rgba(255, 255, 255, 0.1);
+      --glass-edge-glow: rgba(0, 255, 255, 0.25);
+      --neon-cyan: #00f3ff;
+      --neon-pink: #ff2d75;
+      --neon-gold: #ffd966;
+      --neon-purple: #b77eff;
+      --text-primary: #f5f7fc;
+      --text-secondary: #a0b3c9;
+      --card-hover: rgba(0, 243, 255, 0.05);
+    }
 
-// ==================== CONFIGURATION ====================
-const PORT = parseInt(process.env.PORT, 10) || 8000;
-const NODE_ENV = process.env.NODE_ENV || "development";
-const ADMIN_KEY = process.env.ADMIN_KEY || "munax_peak_2026";
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+    }
 
-const DATA_SOURCES = {
-  master: "https://combosupport.in/wp-content/uploads/appdatanew/data.php",
-  updates: "https://combosupport.in/wp-content/uploads/appdatanew/updates.php",
-  version: "https://combosupport.in/wp-content/uploads/appdatanew/version.json"
-};
+    /* Animated Background */
+    .bg-aura {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -3;
+      background: radial-gradient(circle at 20% 30%, #0a1a2a, #02060c);
+    }
+    .bg-aura::before {
+      content: '';
+      position: absolute;
+      width: 200%;
+      height: 200%;
+      top: -50%;
+      left: -50%;
+      background: radial-gradient(circle, rgba(0, 243, 255, 0.08) 2px, transparent 2px);
+      background-size: 50px 50px;
+      animation: drift 80s linear infinite;
+      opacity: 0.5;
+    }
+    @keyframes drift {
+      0% { transform: translate(0, 0) rotate(0deg); }
+      100% { transform: translate(-15%, -15%) rotate(2deg); }
+    }
 
-const REFRESH_MS = 2 * 60 * 60 * 1000;   // 2 hours
-const MAX_RESULTS = 30;
-const GZIP_THRESHOLD = 1024;
+    /* Floating Orbs */
+    .orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(100px);
+      z-index: -2;
+      pointer-events: none;
+    }
+    .orb-1 {
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(0, 243, 255, 0.2), transparent 70%);
+      top: -200px;
+      left: -200px;
+      animation: floatOrb 22s ease-in-out infinite;
+    }
+    .orb-2 {
+      width: 700px;
+      height: 700px;
+      background: radial-gradient(circle, rgba(255, 45, 117, 0.15), transparent 70%);
+      bottom: -250px;
+      right: -250px;
+      animation: floatOrb 28s ease-in-out infinite reverse;
+    }
+    @keyframes floatOrb {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(40px, -30px) scale(1.1); }
+    }
 
-const RATE_LIMITS = {
-  loose: 120,    // categories, health, updates, version
-  normal: 40,    // search
-  strict: 12,    // GSMArena calls
-  admin: 15      // admin endpoints
-};
-const RL_WINDOW_MS = 60 * 1000; // 1 minute
+    /* Scan line */
+    .scan-line {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, var(--neon-cyan), var(--neon-pink), transparent);
+      animation: scanMove 10s linear infinite;
+      z-index: 10;
+      pointer-events: none;
+      opacity: 0.7;
+    }
+    @keyframes scanMove {
+      0% { transform: translateY(-100vh); }
+      100% { transform: translateY(100vh); }
+    }
 
-// ==================== GLOBAL STATE ====================
-let searchIndex = {};      // categoryKey -> { name, models[] }
-let updatesList = [];
-let dataVersion = "—";
-let lastSyncTime = null;
-let syncCount = 0;
-let dashboardHtml = null;
+    /* Main container */
+    .app {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 28px 24px 48px;
+      position: relative;
+      z-index: 10;
+    }
 
-const metrics = {
-  started: new Date().toISOString(),
-  totalRequests: 0,
-  totalErrors: 0,
-  totalSearches: 0,
-  pathHits: {}
-};
+    /* Glass card */
+    .glass-card {
+      background: var(--glass-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-edge);
+      border-radius: 36px;
+      transition: all 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+      transform-style: preserve-3d;
+      perspective: 1200px;
+    }
+    .glass-card:hover {
+      border-color: var(--glass-edge-glow);
+      box-shadow: 0 0 25px rgba(0, 243, 255, 0.2);
+      transform: translateY(-5px);
+    }
 
-// ==================== UTILITIES ====================
-function normalizeForSearch(s) {
-  if (!s) return "";
-  return s.toLowerCase().replace(/[^\w\s]/g, " ").replace(/\s+/g, " ").trim();
-}
+    /* Header */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 24px 36px;
+      margin-bottom: 48px;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+    .logo h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #fff, var(--neon-cyan), var(--neon-pink));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      letter-spacing: -1px;
+    }
+    .logo p {
+      font-size: 0.75rem;
+      letter-spacing: 3px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+    .header-stats {
+      display: flex;
+      gap: 24px;
+    }
+    .stat-pill {
+      background: rgba(0, 0, 0, 0.4);
+      border-radius: 60px;
+      padding: 8px 24px;
+      border: 1px solid var(--glass-edge);
+      font-family: monospace;
+      font-weight: 500;
+    }
+    .stat-pill i {
+      color: var(--neon-cyan);
+      margin-right: 6px;
+    }
 
-function isValidModel(s) {
-  if (!s || typeof s !== "string") return false;
-  const t = s.trim();
-  return t !== "" && t !== "New List" && !t.includes("Coming Soon");
-}
+    /* Stats row */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 28px;
+      margin-bottom: 56px;
+    }
+    .stat-item {
+      padding: 32px 20px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .stat-item::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(0, 243, 255, 0.08), transparent);
+      transition: left 0.6s;
+    }
+    .stat-item:hover::before {
+      left: 100%;
+    }
+    .stat-number {
+      font-size: 3.2rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #fff, var(--neon-cyan));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      line-height: 1;
+    }
+    .stat-label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      color: var(--text-secondary);
+      margin-top: 12px;
+    }
 
-function cleanModel(s) {
-  return s.replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim();
-}
+    /* Mode toggle */
+    .mode-toggle {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 48px;
+    }
+    .mode-pill {
+      display: flex;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 6px;
+      border-radius: 80px;
+      border: 1px solid var(--glass-edge);
+      backdrop-filter: blur(12px);
+    }
+    .mode-btn {
+      padding: 14px 42px;
+      border-radius: 60px;
+      font-weight: 700;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: 0.25s;
+      background: transparent;
+      color: var(--text-secondary);
+      border: none;
+      letter-spacing: 1px;
+    }
+    .mode-btn.active {
+      background: linear-gradient(135deg, var(--neon-cyan), var(--neon-pink));
+      color: #0a0c12;
+      box-shadow: 0 0 20px rgba(0, 243, 255, 0.5);
+    }
 
-function createCategoryKey(name) {
-  return name.toLowerCase()
-    .replace(/^\d+\.\s*/, "")          // remove leading "1. "
-    .replace(/[^a-z0-9]+/g, "_")       // special chars → underscore
-    .replace(/^_|_$/g, "");            // trim underscores
-}
+    /* Search card */
+    .search-card {
+      padding: 36px;
+      margin-bottom: 48px;
+    }
+    select, input, button {
+      width: 100%;
+      padding: 18px 26px;
+      margin-bottom: 24px;
+      border-radius: 40px;
+      border: 1px solid var(--glass-edge);
+      background: rgba(0, 0, 0, 0.5);
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 1rem;
+      outline: none;
+      transition: 0.2s;
+    }
+    select:focus, input:focus {
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 0 3px rgba(0, 243, 255, 0.2);
+    }
+    button {
+      background: linear-gradient(135deg, var(--neon-cyan), var(--neon-pink));
+      color: #0a0c12;
+      font-weight: 800;
+      border: none;
+      cursor: pointer;
+      letter-spacing: 2px;
+    }
+    button:active {
+      transform: scale(0.98);
+    }
 
-// ==================== RATE LIMITER ====================
-const rateStore = new Map();
-function checkRateLimit(ip, tier) {
-  const limit = RATE_LIMITS[tier] || RATE_LIMITS.normal;
-  const now = Date.now();
-  const hits = (rateStore.get(ip) || []).filter(t => now - t < RL_WINDOW_MS);
-  hits.push(now);
-  rateStore.set(ip, hits);
-  if (hits.length > limit) {
-    const retryAfter = Math.ceil((hits[0] + RL_WINDOW_MS - now) / 1000);
-    return { allowed: false, retryAfter };
-  }
-  return { allowed: true, remaining: limit - hits.length };
-}
-setInterval(() => {
-  const cutoff = Date.now() - RL_WINDOW_MS;
-  for (const [ip, hits] of rateStore) {
-    const fresh = hits.filter(t => t > cutoff);
-    if (fresh.length) rateStore.set(ip, fresh);
-    else rateStore.delete(ip);
-  }
-}, 5 * 60 * 1000).unref();
+    /* Results */
+    .results-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      margin-bottom: 56px;
+    }
+    .result-item {
+      padding: 28px 32px;
+      background: rgba(0, 0, 0, 0.4);
+      border-left: 6px solid var(--neon-cyan);
+      transition: 0.25s;
+    }
+    .result-item:hover {
+      background: rgba(0, 0, 0, 0.6);
+      transform: translateX(10px);
+    }
+    .result-brand {
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: var(--neon-cyan);
+      margin-bottom: 10px;
+    }
+    .result-compat {
+      font-size: 0.95rem;
+      margin-bottom: 18px;
+      line-height: 1.6;
+    }
+    .result-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .copy-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: none;
+      padding: 6px 24px;
+      border-radius: 40px;
+      font-size: 0.75rem;
+      cursor: pointer;
+    }
+    .copy-btn:hover {
+      background: var(--neon-cyan);
+      color: #000;
+    }
 
-// ==================== LOGGING ====================
-const LOG_DIR = path.join(__dirname, "logs");
-if (!fs.existsSync(LOG_DIR)) fs.mkdirSync(LOG_DIR, { recursive: true });
+    /* Device grid */
+    .device-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+      gap: 28px;
+    }
+    .device-tile {
+      padding: 28px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: 0.25s;
+    }
+    .device-tile:hover {
+      transform: translateY(-8px);
+      background: rgba(0, 0, 0, 0.6);
+      border-color: var(--neon-cyan);
+    }
+    .device-img {
+      width: 100%;
+      height: 140px;
+      object-fit: contain;
+      margin-bottom: 16px;
+    }
+    .device-name {
+      font-weight: 600;
+    }
 
-function writeLog(file, entry) {
-  fs.appendFile(path.join(LOG_DIR, file), JSON.stringify(entry) + "\n", () => {});
-}
+    /* Info panel */
+    .info-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 28px;
+      margin-bottom: 56px;
+    }
+    .info-card {
+      padding: 28px;
+    }
+    .updates-list {
+      max-height: 220px;
+      overflow-y: auto;
+      margin-top: 20px;
+    }
+    .update-entry {
+      padding: 12px 16px;
+      margin-bottom: 12px;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 28px;
+      font-size: 0.85rem;
+      border-left: 3px solid var(--neon-pink);
+    }
+    .version-display {
+      font-size: 3rem;
+      font-weight: 800;
+      text-align: center;
+      color: var(--neon-gold);
+      margin: 25px 0;
+    }
+    .sync-status {
+      text-align: center;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
 
-function log(level, message, meta = {}) {
-  const entry = { ts: new Date().toISOString(), level, message, ...meta };
-  writeLog(`access_${entry.ts.slice(0, 10)}.jsonl`, entry);
-  if (NODE_ENV !== "production") {
-    const icon = { error: "❌", warn: "⚠️", info: "📋" }[level] || "📋";
-    console.log(`${icon} ${message}`, Object.keys(meta).length ? meta : "");
-  }
-}
+    /* Recent scans */
+    .recent-section {
+      margin-top: 24px;
+      margin-bottom: 48px;
+      padding: 20px 28px;
+    }
+    .chips-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-top: 16px;
+    }
+    .recent-chip {
+      background: rgba(255, 255, 255, 0.05);
+      padding: 8px 22px;
+      border-radius: 60px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      border: 1px solid var(--glass-edge);
+    }
+    .recent-chip:hover {
+      background: var(--neon-cyan);
+      color: #0a0c12;
+      border-color: var(--neon-cyan);
+    }
 
-function logSearch(part, model, resultCount, ip) {
-  metrics.totalSearches++;
-  writeLog(`search_${new Date().toISOString().slice(0, 10)}.jsonl`, {
-    ts: new Date().toISOString(), part, model, resultCount, ip
-  });
-}
+    /* Footer */
+    .footer {
+      text-align: center;
+      padding: 36px 20px;
+      border-top: 1px solid var(--glass-edge);
+    }
+    .footer-name {
+      font-size: 1.5rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #fff, var(--neon-pink));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 32px;
+      margin: 16px 0;
+    }
+    .footer-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+    .footer-links a:hover {
+      color: var(--neon-cyan);
+    }
 
-async function getSearchStats() {
-  const day = new Date().toISOString().slice(0, 10);
-  try {
-    const content = await fs.promises.readFile(path.join(LOG_DIR, `search_${day}.jsonl`), "utf8");
-    const logs = content.split("\n").filter(Boolean).map(l => JSON.parse(l));
-    const byModel = {}, byPart = {};
-    logs.forEach(l => {
-      byModel[l.model] = (byModel[l.model] || 0) + 1;
-      byPart[l.part] = (byPart[l.part] || 0) + 1;
-    });
-    const top = (obj, n) => Object.entries(obj).sort((a, b) => b[1] - a[1]).slice(0, n).map(([k, v]) => ({ name: k, count: v }));
-    return { date: day, total: logs.length, topModels: top(byModel, 10), topParts: top(byPart, 10), recent: logs.slice(-30).reverse() };
-  } catch {
-    return { date: day, total: 0, topModels: [], topParts: [], recent: [] };
-  }
-}
+    /* Loader */
+    .loader {
+      text-align: center;
+      padding: 70px;
+    }
+    .loader::after {
+      content: '';
+      display: inline-block;
+      width: 48px;
+      height: 48px;
+      border: 4px solid var(--neon-cyan);
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
-function cleanOldLogs() {
-  const cutoff = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
-  try {
-    fs.readdirSync(LOG_DIR).forEach(file => {
-      const m = file.match(/^(?:access|search)_(\d{4}-\d{2}-\d{2})\.jsonl$/);
-      if (m && m[1] < cutoff) fs.unlink(path.join(LOG_DIR, file), () => {});
-    });
-  } catch (err) {}
-}
+    @media (max-width: 800px) {
+      .stats-row { grid-template-columns: 1fr; gap: 20px; }
+      .info-grid { grid-template-columns: 1fr; }
+      .mode-btn { padding: 10px 24px; font-size: 0.85rem; }
+      .logo h1 { font-size: 1.8rem; }
+      .header { flex-direction: column; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-aura"></div>
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="scan-line"></div>
 
-// ==================== INDEX BUILDER ====================
-function buildSearchIndex(apiData) {
-  const idx = {};
-  if (!apiData.categories || !Array.isArray(apiData.categories)) return idx;
-  for (const cat of apiData.categories) {
-    if (!cat.name) continue;
-    const key = createCategoryKey(cat.name);
-    idx[key] = { name: cat.name, models: [] };
-    for (const brand of (cat.brands || [])) {
-      if (!brand.name) continue;
-      for (const rawModel of (brand.models || [])) {
-        if (!isValidModel(rawModel)) continue;
-        const compatibility = cleanModel(rawModel);
-        idx[key].models.push({
-          brand: brand.name,
-          compatibility,
-          searchNorm: normalizeForSearch(compatibility)
+  <div class="app">
+    <header class="glass-card header">
+      <div class="logo">
+        <h1><i class="fas fa-microchip"></i> UNIPARTS</h1>
+        <p>NEURAL COMPATIBILITY SCANNER</p>
+      </div>
+      <div class="header-stats">
+        <div class="stat-pill"><i class="fas fa-code-branch"></i> v<span id="headerVersion">—</span></div>
+        <div class="stat-pill"><i class="far fa-clock"></i> <span id="liveClock">--:--:--</span></div>
+      </div>
+    </header>
+
+    <div class="stats-row">
+      <div class="glass-card stat-item"><div class="stat-number" id="statModels">—</div><div class="stat-label">TOTAL MODELS</div></div>
+      <div class="glass-card stat-item"><div class="stat-number" id="statCats">—</div><div class="stat-label">CATEGORIES</div></div>
+      <div class="glass-card stat-item"><div class="stat-number" id="statParts">—</div><div class="stat-label">COMPATIBILITY ENTRIES</div></div>
+    </div>
+
+    <div class="mode-toggle">
+      <div class="mode-pill">
+        <button class="mode-btn active" data-mode="parts"><i class="fas fa-tools"></i> PARTS SCAN</button>
+        <button class="mode-btn" data-mode="specs"><i class="fas fa-database"></i> DEVICE SPECS</button>
+      </div>
+    </div>
+
+    <div id="partsUI" class="glass-card search-card">
+      <select id="categorySelect"><option>LOADING CATEGORIES...</option></select>
+      <input type="text" id="modelInput" placeholder="Enter model (e.g., Redmi 9, iPhone 12)" autocomplete="off">
+      <button id="searchBtn"><i class="fas fa-brain"></i> START NEURAL SCAN</button>
+    </div>
+
+    <div id="specsUI" class="glass-card search-card" style="display: none;">
+      <input type="text" id="specsInput" placeholder="Search device (e.g., Samsung Galaxy S23)" autocomplete="off">
+      <button id="specsBtn"><i class="fas fa-search"></i> FETCH FROM GSMARENA</button>
+    </div>
+
+    <div id="resultsArea" class="results-grid">
+      <div class="glass-card" style="padding: 70px; text-align: center;"><i class="fas fa-robot"></i> SELECT CATEGORY & MODEL TO BEGIN</div>
+    </div>
+
+    <div class="glass-card recent-section">
+      <div style="font-size:0.75rem; letter-spacing:2px; color:var(--text-secondary);"><i class="fas fa-history"></i> RECENT SCANS</div>
+      <div class="chips-container" id="recentChips"></div>
+    </div>
+
+    <div class="info-grid">
+      <div class="glass-card info-card">
+        <div style="font-weight:700;"><i class="fas fa-newspaper"></i> LATEST UPDATES</div>
+        <div class="updates-list" id="updatesList">Loading updates...</div>
+      </div>
+      <div class="glass-card info-card">
+        <div style="font-weight:700; text-align:center;"><i class="fas fa-database"></i> DATABASE VERSION</div>
+        <div class="version-display" id="versionBadge">—</div>
+        <div class="sync-status" id="lastSyncText">Sync status: --</div>
+      </div>
+    </div>
+
+    <footer class="footer">
+      <div class="footer-name">MUNavvir</div>
+      <div class="footer-links">
+        <a href="tel:+918590822912"><i class="fas fa-phone-alt"></i> +91 85908 22912</a>
+        <a href="https://instagram.com/munavi.r_" target="_blank"><i class="fab fa-instagram"></i> @munavi.r_</a>
+      </div>
+      <div style="font-size:0.7rem; opacity:0.5;">PREMIUM NEURAL INTELLIGENCE · ULTIMATE EDITION</div>
+    </footer>
+  </div>
+
+  <script>
+    const API_BASE = '';
+    let currentMode = 'parts';
+    let categories = [];
+    let recentList = JSON.parse(localStorage.getItem('uniparts_pro_recent') || '[]');
+
+    const partsUI = document.getElementById('partsUI');
+    const specsUI = document.getElementById('specsUI');
+    const categorySelect = document.getElementById('categorySelect');
+    const modelInput = document.getElementById('modelInput');
+    const searchBtn = document.getElementById('searchBtn');
+    const specsInput = document.getElementById('specsInput');
+    const specsBtn = document.getElementById('specsBtn');
+    const resultsDiv = document.getElementById('resultsArea');
+    const recentChips = document.getElementById('recentChips');
+    const updatesListDiv = document.getElementById('updatesList');
+    const versionBadgeSpan = document.getElementById('versionBadge');
+    const lastSyncSpan = document.getElementById('lastSyncText');
+    const headerVersionSpan = document.getElementById('headerVersion');
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/[&<>]/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;' }[m]));
+    }
+
+    function showToast(msg, isError = false) {
+      const toast = document.createElement('div');
+      toast.innerHTML = `<i class="fas ${isError ? 'fa-exclamation-triangle' : 'fa-check-circle'}"></i> ${msg}`;
+      toast.style.cssText = `position:fixed; bottom:30px; left:50%; transform:translateX(-50%); background:${isError ? '#ff2d75' : '#00f3ff'}; color:#000; padding:14px 28px; border-radius:60px; font-size:0.9rem; font-weight:700; z-index:9999; backdrop-filter:blur(12px); box-shadow:0 0 20px rgba(0,243,255,0.5); display:flex; align-items:center; gap:10px;`;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 2800);
+    }
+
+    function updateClock() {
+      const now = new Date();
+      document.getElementById('liveClock').innerText = now.toLocaleTimeString('en-GB');
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    async function loadCategories() {
+      try {
+        const res = await fetch(`${API_BASE}/categories`);
+        const data = await res.json();
+        categories = data.categories || [];
+        const totalModels = categories.reduce((s, c) => s + (c.modelCount || 0), 0);
+        document.getElementById('statModels').innerText = totalModels.toLocaleString();
+        document.getElementById('statCats').innerText = categories.length;
+        document.getElementById('statParts').innerText = categories.filter(c => c.modelCount > 0).length;
+        categorySelect.innerHTML = '<option value="">SELECT CATEGORY</option>' + 
+          categories.map(c => `<option value="${c.key}">${escapeHtml(c.name)} (${c.modelCount})</option>`).join('');
+      } catch(e) {
+        console.error(e);
+        categorySelect.innerHTML = '<option>ERROR LOADING CATEGORIES</option>';
+        showToast('Could not load categories', true);
+      }
+    }
+
+    async function loadUpdatesAndVersion() {
+      try {
+        const [updRes, verRes] = await Promise.all([
+          fetch(`${API_BASE}/updates`),
+          fetch(`${API_BASE}/version`)
+        ]);
+        const updatesData = await updRes.json();
+        const versionData = await verRes.json();
+        if (updatesData.success && updatesData.updates.length) {
+          updatesListDiv.innerHTML = updatesData.updates.map(u => `<div class="update-entry"><i class="fas fa-sync-alt"></i> ${escapeHtml(u)}</div>`).join('');
+        } else {
+          updatesListDiv.innerHTML = '<div class="update-entry">✨ NO RECENT UPDATES</div>';
+        }
+        if (versionData.success) {
+          const ver = versionData.version;
+          versionBadgeSpan.innerText = ver;
+          headerVersionSpan.innerText = ver;
+          if (versionData.lastSync) {
+            const syncDate = new Date(versionData.lastSync);
+            lastSyncSpan.innerHTML = `<i class="fas fa-clock"></i> Last sync: ${syncDate.toLocaleString()}`;
+          } else {
+            lastSyncSpan.innerHTML = '<i class="fas fa-sync-alt"></i> Last sync: just now';
+          }
+        } else {
+          versionBadgeSpan.innerText = '—';
+          headerVersionSpan.innerText = '—';
+        }
+      } catch(e) {
+        updatesListDiv.innerHTML = '<div class="update-entry">⚠️ UNABLE TO LOAD UPDATES</div>';
+        versionBadgeSpan.innerText = '?';
+      }
+    }
+
+    function saveRecent(cat, model) {
+      const key = `${cat}::${model}`;
+      recentList = [key, ...recentList.filter(r => r !== key)].slice(0, 6);
+      localStorage.setItem('uniparts_pro_recent', JSON.stringify(recentList));
+      renderRecents();
+    }
+
+    function renderRecents() {
+      if (!recentList.length) {
+        recentChips.innerHTML = '<span style="color:#555;">—</span>';
+        return;
+      }
+      recentChips.innerHTML = recentList.map(item => {
+        const [catKey, model] = item.split('::');
+        return `<span class="recent-chip" data-cat="${catKey}" data-model="${model}"><i class="fas fa-history"></i> ${escapeHtml(model)}</span>`;
+      }).join('');
+      document.querySelectorAll('.recent-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          const cat = chip.dataset.cat;
+          const model = chip.dataset.model;
+          if (currentMode === 'parts') {
+            if (cat && categorySelect.querySelector(`option[value="${cat}"]`)) categorySelect.value = cat;
+            modelInput.value = model;
+            runPartsSearch();
+          } else {
+            specsInput.value = model;
+            runSpecsSearch();
+          }
         });
+      });
+    }
+
+    async function runPartsSearch() {
+      const cat = categorySelect.value;
+      const model = modelInput.value.trim();
+      if (!cat) { showToast('SELECT A CATEGORY', true); return; }
+      if (!model) { showToast('ENTER A MODEL', true); return; }
+      saveRecent(cat, model);
+      setLoading(true);
+      try {
+        const res = await fetch(`${API_BASE}/search?part=${encodeURIComponent(cat)}&model=${encodeURIComponent(model)}`);
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        if (!data.results || data.results.length === 0) {
+          resultsDiv.innerHTML = `<div class="glass-card" style="padding:60px; text-align:center;"><i class="fas fa-frown"></i> NO COMPATIBILITY FOUND FOR "${escapeHtml(model)}"</div>`;
+        } else {
+          let html = `<div style="margin-bottom:25px; color:var(--text-secondary);"><i class="fas fa-chart-line"></i> ${data.totalMatches} RESULT(S) FOR "${escapeHtml(model)}"</div>`;
+          data.results.forEach(r => {
+            html += `
+              <div class="glass-card result-item">
+                <div class="result-brand"><i class="fas fa-trademark"></i> ${escapeHtml(r.brand)}</div>
+                <div class="result-compat">${escapeHtml(r.compatibility)}</div>
+                <div class="result-footer">
+                  <span><i class="fas fa-percent"></i> MATCH: ${r.score}%</span>
+                  <button class="copy-btn" data-text="${escapeHtml(r.compatibility).replace(/"/g, '&quot;')}"><i class="fas fa-copy"></i> COPY</button>
+                </div>
+              </div>`;
+          });
+          resultsDiv.innerHTML = html;
+          document.querySelectorAll('.copy-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+              navigator.clipboard.writeText(btn.dataset.text);
+              showToast('COPIED TO CLIPBOARD!');
+            });
+          });
+        }
+      } catch(e) {
+        resultsDiv.innerHTML = `<div class="glass-card" style="padding:60px; text-align:center;"><i class="fas fa-exclamation-triangle"></i> ERROR: ${e.message}</div>`;
+      } finally {
+        setLoading(false);
       }
     }
-  }
-  return idx;
-}
 
-// ==================== SEARCH ENGINE ====================
-function searchCategory(categoryKey, query) {
-  const cat = searchIndex[categoryKey];
-  if (!cat) return null;
-  const qNorm = normalizeForSearch(query);
-  if (!qNorm) return [];
-  const words = qNorm.split(" ").filter(w => w.length > 1);
-  const scored = [];
-  const seen = new Set();
-  for (const model of cat.models) {
-    const c = model.searchNorm;
-    if (seen.has(c)) continue;
-    let score = 0;
-    if (c === qNorm) score = 100;
-    else if (c.includes(qNorm)) score = 90;
-    else if (words.every(w => c.includes(w))) score = 75;
-    else {
-      const hits = words.filter(w => c.includes(w)).length;
-      if (hits > 0 && hits / words.length >= 0.7) score = 55;
-    }
-    if (score > 0) {
-      seen.add(c);
-      scored.push({ ...model, score });
-      if (scored.length >= MAX_RESULTS * 2) break;
-    }
-  }
-  return scored.sort((a, b) => b.score - a.score).slice(0, MAX_RESULTS)
-    .map(({ brand, compatibility, score }) => ({ brand, compatibility, score }));
-}
-
-// ==================== EXTERNAL DATA FETCH ====================
-async function fetchAllExternalData() {
-  log("info", "🔄 Syncing external data...");
-  let masterOk = false;
-  try {
-    const masterRes = await axios.get(DATA_SOURCES.master, { timeout: 30000 });
-    const fresh = buildSearchIndex(masterRes.data);
-    if (Object.keys(fresh).length === 0) throw new Error("Empty index");
-    searchIndex = fresh;
-    masterOk = true;
-    lastSyncTime = new Date().toISOString();
-    syncCount++;
-    const totalModels = Object.values(searchIndex).reduce((s, c) => s + c.models.length, 0);
-    log("info", `✅ Master data: ${Object.keys(searchIndex).length} categories, ${totalModels} models`);
-  } catch (err) {
-    log("error", "❌ Master fetch failed", { error: err.message });
-  }
-  try {
-    const updatesRes = await axios.get(DATA_SOURCES.updates, { timeout: 10000 });
-    if (updatesRes.data && Array.isArray(updatesRes.data.updates)) {
-      updatesList = updatesRes.data.updates;
-      log("info", `✅ Updates: ${updatesList.length} items`);
-    }
-  } catch (err) {
-    log("warn", "⚠️ Updates fetch failed");
-  }
-  try {
-    const versionRes = await axios.get(DATA_SOURCES.version, { timeout: 5000 });
-    if (versionRes.data && versionRes.data.version) {
-      dataVersion = versionRes.data.version;
-      log("info", `✅ Version: ${dataVersion}`);
-    }
-  } catch (err) {
-    log("warn", "⚠️ Version fetch failed");
-  }
-  if (!masterOk) log("error", "❌ No master data available – search will be empty");
-}
-
-// ==================== HTTP HELPERS ====================
-function getClientIp(req) {
-  return req.headers["x-forwarded-for"]?.split(",")[0].trim() || req.socket?.remoteAddress || "unknown";
-}
-
-function formatUptime(sec) {
-  const d = Math.floor(sec / 86400), h = Math.floor((sec % 86400) / 3600), m = Math.floor((sec % 3600) / 60), s = Math.floor(sec % 60);
-  return [d && `${d}d`, h && `${h}h`, m && `${m}m`, `${s}s`].filter(Boolean).join(" ");
-}
-
-function formatBytes(bytes) {
-  if (bytes < 1024) return `${bytes}B`;
-  if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)}KB`;
-  return `${(bytes / 1048576).toFixed(1)}MB`;
-}
-
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type"
-};
-const SEC = {
-  "X-Content-Type-Options": "nosniff",
-  "X-Frame-Options": "SAMEORIGIN",
-  "X-XSS-Protection": "1; mode=block"
-};
-
-function sendJson(res, req, status, data, startTime) {
-  const body = JSON.stringify(data);
-  const buf = Buffer.from(body, "utf8");
-  const elapsed = startTime ? (Date.now() - startTime).toFixed(0) : "—";
-  const headers = {
-    "Content-Type": "application/json; charset=utf-8",
-    "X-Response-Time": `${elapsed}ms`,
-    ...CORS,
-    ...SEC
-  };
-  metrics.totalRequests++;
-  if (status >= 400) metrics.totalErrors++;
-  const acceptEncoding = req.headers["accept-encoding"] || "";
-  if (buf.length >= GZIP_THRESHOLD && acceptEncoding.includes("gzip")) {
-    zlib.gzip(buf, (err, compressed) => {
-      if (err) {
-        res.writeHead(status, { ...headers, "Content-Length": buf.length });
-        return res.end(buf);
-      }
-      res.writeHead(status, { ...headers, "Content-Encoding": "gzip", "Content-Length": compressed.length });
-      res.end(compressed);
-    });
-  } else {
-    res.writeHead(status, { ...headers, "Content-Length": buf.length });
-    res.end(buf);
-  }
-}
-
-// ==================== HTTP SERVER ====================
-const server = http.createServer(async (req, res) => {
-  const start = Date.now();
-  const ip = getClientIp(req);
-  let url;
-  try {
-    url = new URL(req.url, `http://${req.headers.host}`);
-  } catch {
-    res.writeHead(400);
-    return res.end("Bad request");
-  }
-  const pathname = url.pathname;
-  metrics.pathHits[pathname] = (metrics.pathHits[pathname] || 0) + 1;
-
-  if (req.method === "OPTIONS") {
-    res.writeHead(204, CORS);
-    return res.end();
-  }
-  if (req.method !== "GET") {
-    return sendJson(res, req, 405, { error: "Method not allowed" }, start);
-  }
-
-  // ---- Dashboard ----
-  if (pathname === "/" || pathname === "/dashboard") {
-    const rl = checkRateLimit(ip, "loose");
-    if (!rl.allowed) {
-      res.setHeader("Retry-After", String(rl.retryAfter));
-      return sendJson(res, req, 429, { error: "Too many requests", retryAfter: `${rl.retryAfter}s` }, start);
-    }
-    if (dashboardHtml) {
-      res.writeHead(200, { "Content-Type": "text/html", ...SEC });
-      return res.end(dashboardHtml);
-    }
-    res.writeHead(200, { "Content-Type": "text/html" });
-    return res.end("<!DOCTYPE html><html><body><h1>UNIPARTS PRO</h1><p>Starting up...</p></body></html>");
-  }
-
-  // ---- Health ----
-  if (pathname === "/health") {
-    const rl = checkRateLimit(ip, "loose");
-    if (!rl.allowed) return sendJson(res, req, 429, { error: "Rate limit" }, start);
-    const mem = process.memoryUsage();
-    const totalModels = Object.values(searchIndex).reduce((s, c) => s + c.models.length, 0);
-    return sendJson(res, req, 200, {
-      status: "operational",
-      uptime: formatUptime(process.uptime()),
-      startedAt: metrics.started,
-      environment: NODE_ENV,
-      node: process.version,
-      memory: {
-        rss: formatBytes(mem.rss),
-        heapUsed: formatBytes(mem.heapUsed),
-        heapTotal: formatBytes(mem.heapTotal)
-      },
-      data: {
-        categories: Object.keys(searchIndex).length,
-        models: totalModels,
-        version: dataVersion,
-        lastSync: lastSyncTime,
-        syncCount
-      },
-      metrics: {
-        requests: metrics.totalRequests,
-        errors: metrics.totalErrors,
-        searches: metrics.totalSearches
-      }
-    }, start);
-  }
-
-  // ---- Categories ----
-  if (pathname === "/categories") {
-    const rl = checkRateLimit(ip, "loose");
-    if (!rl.allowed) return sendJson(res, req, 429, { error: "Rate limit" }, start);
-    const cats = Object.keys(searchIndex).map(key => ({
-      key,
-      name: searchIndex[key].name,
-      modelCount: searchIndex[key].models.length
-    }));
-    return sendJson(res, req, 200, { success: true, total: cats.length, categories: cats }, start);
-  }
-
-  // ---- Search ----
-  if (pathname === "/search") {
-    const rl = checkRateLimit(ip, "normal");
-    if (!rl.allowed) return sendJson(res, req, 429, { error: "Rate limit" }, start);
-    let part = (url.searchParams.get("part") || "").trim().slice(0, 80);
-    let model = (url.searchParams.get("model") || "").trim().slice(0, 100);
-    if (!part || !model) {
-      return sendJson(res, req, 400, { error: "Missing 'part' or 'model' parameters" }, start);
-    }
-    // Resolve category key
-    let categoryKey = null;
-    if (searchIndex[part]) {
-      categoryKey = part;
-    } else {
-      const cleanPart = part.toLowerCase().replace(/[^a-z0-9]/g, "");
-      categoryKey = Object.keys(searchIndex).find(k => k.replace(/[^a-z0-9]/g, "") === cleanPart)
-        || Object.keys(searchIndex).find(k => searchIndex[k].name.toLowerCase().includes(part.toLowerCase()));
-    }
-    if (!categoryKey) {
-      return sendJson(res, req, 404, {
-        error: "Category not found",
-        available: Object.keys(searchIndex).map(k => ({ key: k, name: searchIndex[k].name }))
-      }, start);
-    }
-    const results = searchCategory(categoryKey, model);
-    logSearch(part, model, results ? results.length : 0, ip);
-    return sendJson(res, req, 200, {
-      success: true,
-      category: { key: categoryKey, name: searchIndex[categoryKey].name },
-      query: model,
-      totalMatches: results ? results.length : 0,
-      results: results || []
-    }, start);
-  }
-
-  // ---- Updates ----
-  if (pathname === "/updates") {
-    const rl = checkRateLimit(ip, "loose");
-    if (!rl.allowed) return sendJson(res, req, 429, { error: "Rate limit" }, start);
-    return sendJson(res, req, 200, { success: true, updates: updatesList }, start);
-  }
-
-  // ---- Version ----
-  if (pathname === "/version") {
-    const rl = checkRateLimit(ip, "loose");
-    if (!rl.allowed) return sendJson(res, req, 429, { error: "Rate limit" }, start);
-    return sendJson(res, req, 200, { success: true, version: dataVersion, lastSync: lastSyncTime }, start);
-  }
-
-  // ---- GSMArena Search ----
-  if (pathname === "/specs-search") {
-    const rl = checkRateLimit(ip, "strict");
-    if (!rl.allowed) return sendJson(res, req, 429, { error: "Rate limit" }, start);
-    const query = (url.searchParams.get("q") || "").trim().slice(0, 80);
-    if (!query) return sendJson(res, req, 400, { error: "Missing query" }, start);
-    try {
-      const gsmRes = await axios.get(`https://www.gsmarena.com/results.php3?sQuickSearch=yes&sName=${encodeURIComponent(query)}`, {
-        headers: { "User-Agent": "Mozilla/5.0" },
-        timeout: 10000
-      });
-      const $ = cheerio.load(gsmRes.data);
-      const results = [];
-      $(".makers li").each((_, el) => {
-        const a = $(el).find("a");
-        const href = a.attr("href");
-        const title = a.find("img").attr("title") || a.text().trim();
-        const img = a.find("img").attr("src");
-        if (href && title) results.push({ id: href, title, img });
-      });
-      return sendJson(res, req, 200, { success: true, results }, start);
-    } catch (err) {
-      return sendJson(res, req, 502, { error: "GSMArena temporarily unavailable" }, start);
-    }
-  }
-
-  // ---- GSMArena Details ----
-  if (pathname === "/specs-details") {
-    const rl = checkRateLimit(ip, "strict");
-    if (!rl.allowed) return sendJson(res, req, 429, { error: "Rate limit" }, start);
-    const id = (url.searchParams.get("id") || "").trim().slice(0, 120);
-    if (!id || /[<>"'\\]/.test(id) || id.includes("..") || id.includes("//")) {
-      return sendJson(res, req, 400, { error: "Invalid id" }, start);
-    }
-    try {
-      const detailRes = await axios.get(`https://www.gsmarena.com/${id}`, {
-        headers: { "User-Agent": "Mozilla/5.0" },
-        timeout: 10000
-      });
-      const $ = cheerio.load(detailRes.data);
-      const name = $(".specs-phone-name-title").text().trim();
-      const img = $(".specs-photo-main img").attr("src");
-      const specs = {};
-      $("table").each((_, table) => {
-        const head = $(table).find("th").text().trim();
-        if (!head) return;
-        specs[head] = {};
-        $(table).find("tr").each((_, row) => {
-          const k = $(row).find("td").eq(0).text().trim();
-          const v = $(row).find("td").eq(1).text().replace(/\n/g, " ").trim();
-          if (k && v) specs[head][k] = v;
+    async function runSpecsSearch() {
+      const query = specsInput.value.trim();
+      if (!query) { showToast('ENTER A DEVICE NAME', true); return; }
+      saveRecent('specs', query);
+      setLoading(true);
+      try {
+        const res = await fetch(`${API_BASE}/specs-search?q=${encodeURIComponent(query)}`);
+        const data = await res.json();
+        if (!data.success || !data.results || data.results.length === 0) {
+          resultsDiv.innerHTML = `<div class="glass-card" style="padding:60px; text-align:center;"><i class="fas fa-search"></i> NO DEVICES FOUND FOR "${escapeHtml(query)}"</div>`;
+          return;
+        }
+        let html = `<div class="device-grid">`;
+        data.results.forEach(d => {
+          html += `
+            <div class="glass-card device-tile" data-id="${escapeHtml(d.id)}" data-name="${escapeHtml(d.title)}">
+              <img src="${escapeHtml(d.img || '')}" class="device-img" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Crect fill=%22%23333%22 width=%22100%22 height=%22100%22/%3E%3Ctext fill=%22%23999%22 x=%2250%22 y=%2255%22 text-anchor=%22middle%22%3E📱%3C/text%3E%3C/svg%3E'">
+              <div class="device-name">${escapeHtml(d.title)}</div>
+            </div>`;
         });
+        html += `</div>`;
+        resultsDiv.innerHTML = html;
+        document.querySelectorAll('.device-tile').forEach(card => {
+          card.addEventListener('click', () => loadSpecsDetail(card.dataset.id));
+        });
+      } catch(e) {
+        resultsDiv.innerHTML = `<div class="glass-card" style="padding:60px; text-align:center;"><i class="fas fa-times-circle"></i> SEARCH FAILED</div>`;
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    async function loadSpecsDetail(id) {
+      resultsDiv.innerHTML = `<div class="glass-card" style="padding:60px; text-align:center;"><div class="loader"></div> LOADING SPECIFICATIONS...</div>`;
+      try {
+        const res = await fetch(`${API_BASE}/specs-details?id=${encodeURIComponent(id)}`);
+        const data = await res.json();
+        if (!data.success) throw new Error();
+        let html = `<div class="glass-card" style="padding:32px;"><h3 style="margin-bottom:20px;"><i class="fas fa-mobile-alt"></i> ${escapeHtml(data.name)}</h3>`;
+        if (data.img) html += `<img src="${escapeHtml(data.img)}" style="max-width:160px; border-radius:28px; margin-bottom:24px;">`;
+        for (const [cat, specs] of Object.entries(data.specs)) {
+          html += `<details style="margin-top:18px;"><summary style="font-weight:700; cursor:pointer; color:var(--neon-cyan);"><i class="fas fa-list-ul"></i> ${escapeHtml(cat)}</summary>`;
+          for (const [k, v] of Object.entries(specs)) {
+            html += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.08); padding:12px 0;"><span style="color:var(--text-secondary);">${escapeHtml(k)}</span><span>${escapeHtml(v)}</span></div>`;
+          }
+          html += `</details>`;
+        }
+        html += `<button id="backToSpecs" style="margin-top:28px;"><i class="fas fa-arrow-left"></i> BACK TO RESULTS</button></div>`;
+        resultsDiv.innerHTML = html;
+        document.getElementById('backToSpecs')?.addEventListener('click', () => runSpecsSearch());
+      } catch(e) {
+        resultsDiv.innerHTML = `<div class="glass-card" style="padding:60px; text-align:center;"><i class="fas fa-exclamation-triangle"></i> COULD NOT LOAD SPECS</div>`;
+      }
+    }
+
+    function setLoading(loading) {
+      const btn = currentMode === 'parts' ? searchBtn : specsBtn;
+      btn.disabled = loading;
+      btn.innerHTML = loading ? '<i class="fas fa-spinner fa-pulse"></i> SCANNING...' : (currentMode === 'parts' ? '<i class="fas fa-brain"></i> START NEURAL SCAN' : '<i class="fas fa-search"></i> FETCH FROM GSMARENA');
+      if (loading) resultsDiv.innerHTML = `<div class="glass-card" style="padding:60px; text-align:center;"><div class="loader"></div> NEURAL SCAN IN PROGRESS...</div>`;
+    }
+
+    function setMode(mode) {
+      currentMode = mode;
+      partsUI.style.display = mode === 'parts' ? 'block' : 'none';
+      specsUI.style.display = mode === 'specs' ? 'block' : 'none';
+      document.querySelectorAll('.mode-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.mode === mode);
       });
-      return sendJson(res, req, 200, { success: true, name, img, specs }, start);
-    } catch (err) {
-      return sendJson(res, req, 502, { error: "GSMArena temporarily unavailable" }, start);
+      resultsDiv.innerHTML = `<div class="glass-card" style="padding:70px; text-align:center;">${mode === 'parts' ? '<i class="fas fa-tools"></i> SELECT CATEGORY & MODEL TO BEGIN COMPATIBILITY SCAN.' : '<i class="fas fa-database"></i> ENTER A DEVICE NAME TO FETCH FULL SPECIFICATIONS FROM GSMARENA.'}</div>`;
     }
-  }
 
-  // ---- Admin Stats ----
-  if (pathname === "/admin/stats") {
-    const rl = checkRateLimit(ip, "admin");
-    if (!rl.allowed) return sendJson(res, req, 429, { error: "Rate limit" }, start);
-    const key = url.searchParams.get("key");
-    if (key !== ADMIN_KEY) {
-      log("warn", "Admin auth fail", { ip });
-      return sendJson(res, req, 403, { error: "Forbidden" }, start);
-    }
-    const stats = await getSearchStats();
-    return sendJson(res, req, 200, { ...stats, serverMetrics: metrics }, start);
-  }
+    searchBtn.addEventListener('click', runPartsSearch);
+    specsBtn.addEventListener('click', runSpecsSearch);
+    modelInput.addEventListener('keypress', e => { if (e.key === 'Enter') runPartsSearch(); });
+    specsInput.addEventListener('keypress', e => { if (e.key === 'Enter') runSpecsSearch(); });
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+      btn.addEventListener('click', () => setMode(btn.dataset.mode));
+    });
 
-  // ---- Admin Refresh ----
-  if (pathname === "/admin/refresh") {
-    const rl = checkRateLimit(ip, "admin");
-    if (!rl.allowed) return sendJson(res, req, 429, { error: "Rate limit" }, start);
-    const key = url.searchParams.get("key");
-    if (key !== ADMIN_KEY) return sendJson(res, req, 403, { error: "Forbidden" }, start);
-    log("info", "Manual refresh triggered", { ip });
-    fetchAllExternalData().catch(err => log("error", "Refresh error", { error: err.message }));
-    return sendJson(res, req, 200, { success: true, message: "Refresh started" }, start);
-  }
-
-  // ---- 404 ----
-  return sendJson(res, req, 404, { error: "Endpoint not found" }, start);
-});
-
-server.timeout = 30000;
-server.headersTimeout = 35000;
-
-// ==================== STARTUP ====================
-process.on("uncaughtException", err => log("error", "Uncaught exception", { message: err.message, stack: err.stack }));
-process.on("unhandledRejection", reason => log("error", "Unhandled rejection", { reason: String(reason) }));
-
-const DASH_PATH = path.join(__dirname, "dashboard.html");
-try {
-  if (fs.existsSync(DASH_PATH)) {
-    dashboardHtml = fs.readFileSync(DASH_PATH, "utf8");
-    log("info", "✅ Dashboard HTML loaded");
-  } else {
-    log("warn", "⚠️ dashboard.html not found – using fallback");
-  }
-} catch (err) {
-  log("warn", "⚠️ Could not read dashboard.html", { error: err.message });
-}
-
-(async () => {
-  await fetchAllExternalData();
-  server.listen(PORT, "0.0.0.0", () => {
-    const totalModels = Object.values(searchIndex).reduce((s, c) => s + c.models.length, 0);
-    console.log("\n🚀 ════════════════════════════════════════════════");
-    console.log("   UNIPARTS PRO  ·  ULTRA PEAK FINAL BOSS");
-    console.log(`   🌐 Port          : ${PORT}`);
-    console.log(`   🌍 Environment   : ${NODE_ENV}`);
-    console.log(`   📦 Categories    : ${Object.keys(searchIndex).length}`);
-    console.log(`   📱 Models        : ${totalModels.toLocaleString()}`);
-    console.log(`   🔄 Auto-refresh  : every ${REFRESH_MS / 3600000} hours`);
-    console.log(`   🔐 Admin key     : set via ADMIN_KEY env var`);
-    console.log("   ════════════════════════════════════════════════\n");
-  });
-})();
-
-setInterval(async () => {
-  log("info", "🔄 Scheduled data refresh");
-  await fetchAllExternalData();
-}, REFRESH_MS);
-
-cleanOldLogs();
-setInterval(cleanOldLogs, 24 * 60 * 60 * 1000).unref();
-
-function shutdown(sig) {
-  console.log(`\n🛑 ${sig} – shutting down gracefully…`);
-  server.close(() => {
-    log("info", "Server closed", { sig, uptime: formatUptime(process.uptime()) });
-    process.exit(0);
-  });
-  setTimeout(() => process.exit(1), 10000).unref();
-}
-process.on("SIGTERM", () => shutdown("SIGTERM"));
-process.on("SIGINT", () => shutdown("SIGINT")); 
+    loadCategories();
+    loadUpdatesAndVersion();
+    renderRecents();
+    setMode('parts');
+  </script>
+</body>
+</html>
