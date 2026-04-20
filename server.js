@@ -18,20 +18,15 @@ const DATA_SOURCES = {
   version: "https://combosupport.in/wp-content/uploads/appdatanew/version.json"
 };
 
-const REFRESH_MS = 2 * 60 * 60 * 1000;   // 2 hours
+const REFRESH_MS = 2 * 60 * 60 * 1000;
 const MAX_RESULTS = 30;
 const GZIP_THRESHOLD = 1024;
 
-const RATE_LIMITS = {
-  loose: 120,    // categories, health, updates, version
-  normal: 40,    // search
-  strict: 12,    // GSMArena calls
-  admin: 15      // admin endpoints
-};
-const RL_WINDOW_MS = 60 * 1000; // 1 minute
+const RATE_LIMITS = { loose: 120, normal: 40, strict: 12, admin: 15 };
+const RL_WINDOW_MS = 60 * 1000;
 
 // ==================== GLOBAL STATE ====================
-let searchIndex = {};      // categoryKey -> { name, models[] }
+let searchIndex = {};
 let updatesList = [];
 let dataVersion = "—";
 let lastSyncTime = null;
@@ -46,20 +41,53 @@ const metrics = {
   pathHits: {}
 };
 
-// ==================== UTILITIES ====================
-function normalizeForSearch(s) {
-  if (!s) return "";
-  return s.toLowerCase().replace(/[^\w\s]/g, " ").replace(/\s+/g, " ").trim();
+// ==================== ULTRA CLEANING FUNCTION ====================
+function cleanModelString(raw) {
+  if (!raw || typeof raw !== "string") return "";
+  let str = raw;
+
+  // Remove common headers
+  str = str.replace(/^Universal\s+(Oca|Combo)\s+Glass\s+List\s*/i, "");
+  str = str.replace(/^Universal\s+Combo\s+List\s*/i, "");
+
+  // Remove leading numbers like "1.", "2.", "8." (including spaces)
+  str = str.replace(/^\d+\.\s*/, "");
+
+  // Remove shop credits in parentheses at the very beginning
+  str = str.replace(/^\([^)]+\)\s*/, "");
+
+  // Remove ✅ symbol and any remaining emojis (simple Unicode range)
+  str = str.replace(/[\u{1F300}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1F1E0}-\u{1F1FF}✅]/gu, "");
+
+  // Remove extra spaces and trim
+  str = str.replace(/\s+/g, " ").trim();
+
+  // If after cleaning the string is empty or just a placeholder, return empty
+  if (!str || str === "New List" || str.includes("Coming Soon")) return "";
+
+  return str;
+}
+
+function cleanBrandName(raw) {
+  if (!raw || typeof raw !== "string") return "";
+  let brand = raw;
+  // Remove "TM " prefix
+  brand = brand.replace(/^TM\s+/i, "");
+  // Remove leading numbers like "1."
+  brand = brand.replace(/^\d+\.\s*/, "");
+  return brand.trim();
 }
 
 function isValidModel(s) {
   if (!s || typeof s !== "string") return false;
   const t = s.trim();
-  return t !== "" && t !== "New List" && !t.includes("Coming Soon");
+  if (t === "" || t === "New List" || t.includes("Coming Soon")) return false;
+  return true;
 }
 
-function cleanModel(s) {
-  return s.replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim();
+function normalizeForSearch(s) {
+  if (!s) return "";
+  return s.toLowerCase().replace(/[^\w\s]/g, " ").replace(/\s+/g, " ").trim();
 }
 
 function createCategoryKey(name) {
@@ -143,7 +171,7 @@ function cleanOldLogs() {
   } catch (err) {}
 }
 
-// ==================== INDEX BUILDER ====================
+// ==================== INDEX BUILDER (PURE) ====================
 function buildSearchIndex(apiData) {
   const idx = {};
   if (!apiData.categories || !Array.isArray(apiData.categories)) return idx;
@@ -153,11 +181,13 @@ function buildSearchIndex(apiData) {
     idx[key] = { name: cat.name, models: [] };
     for (const brand of (cat.brands || [])) {
       if (!brand.name) continue;
+      const cleanBrand = cleanBrandName(brand.name);
       for (const rawModel of (brand.models || [])) {
         if (!isValidModel(rawModel)) continue;
-        const compatibility = cleanModel(rawModel);
+        let compatibility = cleanModelString(rawModel);
+        if (!compatibility) continue;
         idx[key].models.push({
-          brand: brand.name,
+          brand: cleanBrand,
           compatibility,
           searchNorm: normalizeForSearch(compatibility)
         });
@@ -530,7 +560,7 @@ try {
   server.listen(PORT, "0.0.0.0", () => {
     const totalModels = Object.values(searchIndex).reduce((s, c) => s + c.models.length, 0);
     console.log("\n🚀 ════════════════════════════════════════════════");
-    console.log("   UNIPARTS PRO  ·  ULTRA PRO MAX FINAL BOSS");
+    console.log("   UNIPARTS PRO  ·  PURE DATA EDITION (NEW MODEL)");
     console.log(`   🌐 Port          : ${PORT}`);
     console.log(`   🌍 Environment   : ${NODE_ENV}`);
     console.log(`   📦 Categories    : ${Object.keys(searchIndex).length}`);
