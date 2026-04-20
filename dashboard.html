@@ -1,1417 +1,562 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>UNIPARTS // LEGENDARY EDITION</title>
-  <meta name="description" content="Neural Scan Interface – Ultimate Hardware Compatibility">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    :root {
-      --gold: #D4AF37;
-      --gold-light: #F4E4BC;
-      --gold-dark: #B8860B;
-      --gold-glow: rgba(212, 175, 55, 0.4);
-      --bg: #050505;
-      --surface: rgba(15, 15, 20, 0.6);
-      --surface-hover: rgba(25, 25, 35, 0.8);
-      --text: #FFFFFF;
-      --text-muted: rgba(255, 255, 255, 0.6);
-      --border: rgba(212, 175, 55, 0.2);
-      --border-hover: rgba(212, 175, 55, 0.5);
-      --shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
-      --shadow-gold: 0 0 40px rgba(212, 175, 55, 0.15);
-    }
-
-    body {
-      font-family: 'Space Grotesk', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      overflow-x: hidden;
-      line-height: 1.6;
-    }
-
-    /* Animated Background Mesh */
-    .bg-mesh {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 0;
-      background: 
-        radial-gradient(circle at 20% 80%, rgba(212, 175, 55, 0.08) 0%, transparent 50%),
-        radial-gradient(circle at 80% 20%, rgba(184, 134, 11, 0.05) 0%, transparent 50%),
-        radial-gradient(circle at 50% 50%, rgba(30, 30, 40, 1) 0%, rgba(5, 5, 5, 1) 100%);
-      animation: meshMove 20s ease-in-out infinite;
-    }
-
-    @keyframes meshMove {
-      0%, 100% { transform: translate(0, 0) scale(1); }
-      33% { transform: translate(30px, -30px) scale(1.1); }
-      66% { transform: translate(-20px, 20px) scale(0.95); }
-    }
-
-    /* Floating Particles */
-    .particles {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 1;
-      pointer-events: none;
-      overflow: hidden;
-    }
-
-    .particle {
-      position: absolute;
-      width: 2px;
-      height: 2px;
-      background: var(--gold);
-      border-radius: 50%;
-      opacity: 0.3;
-      animation: float 15s infinite;
-    }
-
-    @keyframes float {
-      0%, 100% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
-      10% { opacity: 0.3; }
-      90% { opacity: 0.3; }
-      100% { transform: translateY(-100vh) rotate(720deg); opacity: 0; }
-    }
-
-    /* Scan Line Effect */
-    .scan-line {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 2px;
-      background: linear-gradient(90deg, transparent, var(--gold), transparent);
-      opacity: 0.3;
-      z-index: 2;
-      animation: scan 8s linear infinite;
-      pointer-events: none;
-    }
-
-    @keyframes scan {
-      0% { transform: translateY(-100vh); }
-      100% { transform: translateY(100vh); }
-    }
-
-    /* Main Content */
-    .app {
-      position: relative;
-      z-index: 10;
-      max-width: 1400px;
-      margin: 0 auto;
-      padding: 24px;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-
-    /* Glass Card Base */
-    .glass {
-      background: var(--surface);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border: 1px solid var(--border);
-      border-radius: 24px;
-      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    .glass:hover {
-      border-color: var(--border-hover);
-      box-shadow: var(--shadow-gold), var(--shadow);
-      transform: translateY(-2px);
-    }
-
-    /* Header */
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 24px 32px;
-      margin-bottom: 32px;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .header::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: -100%;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.1), transparent);
-      animation: shimmer 6s infinite;
-    }
-
-    @keyframes shimmer {
-      0% { left: -100%; }
-      100% { left: 100%; }
-    }
-
-    .brand {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .brand h1 {
-      font-size: 2.5rem;
-      font-weight: 700;
-      letter-spacing: -2px;
-      background: linear-gradient(135deg, var(--gold-light) 0%, var(--gold) 50%, var(--gold-dark) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      text-shadow: 0 0 30px var(--gold-glow);
-    }
-
-    .brand span {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      letter-spacing: 4px;
-      text-transform: uppercase;
-    }
-
-    .header-actions {
-      display: flex;
-      gap: 16px;
-      align-items: center;
-    }
-
-    .clock {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.875rem;
-      color: var(--gold);
-      padding: 12px 20px;
-      background: rgba(0, 0, 0, 0.4);
-      border-radius: 50px;
-      border: 1px solid var(--border);
-      font-variant-numeric: tabular-nums;
-      letter-spacing: 1px;
-    }
-
-    .icon-btn {
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      background: transparent;
-      border: 1px solid var(--border);
-      color: var(--gold);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.3s ease;
-      font-size: 1.2rem;
-    }
-
-    .icon-btn:hover {
-      background: var(--gold);
-      color: #000;
-      transform: scale(1.1) rotate(5deg);
-      box-shadow: 0 0 20px var(--gold-glow);
-    }
-
-    /* Mode Switcher */
-    .mode-switcher {
-      display: flex;
-      gap: 12px;
-      margin-bottom: 32px;
-      padding: 6px;
-      background: rgba(0, 0, 0, 0.4);
-      border-radius: 50px;
-      width: fit-content;
-      margin-left: auto;
-      margin-right: auto;
-      border: 1px solid var(--border);
-    }
-
-    .mode-btn {
-      padding: 14px 32px;
-      border: none;
-      background: transparent;
-      color: var(--text-muted);
-      font-family: 'Space Grotesk', sans-serif;
-      font-weight: 600;
-      font-size: 0.875rem;
-      border-radius: 50px;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .mode-btn.active {
-      background: var(--gold);
-      color: #000;
-      box-shadow: 0 4px 20px rgba(212, 175, 55, 0.4);
-    }
-
-    .mode-btn:not(.active):hover {
-      color: var(--gold);
-      background: rgba(212, 175, 55, 0.1);
-    }
-
-    /* Recent Chips */
-    .recents-section {
-      margin-bottom: 24px;
-    }
-
-    .section-label {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.7rem;
-      text-transform: uppercase;
-      letter-spacing: 3px;
-      color: var(--text-muted);
-      margin-bottom: 12px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .section-label::before {
-      content: '';
-      width: 20px;
-      height: 1px;
-      background: var(--gold);
-    }
-
-    .chips {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-
-    .chip {
-      padding: 8px 16px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid var(--border);
-      border-radius: 50px;
-      font-size: 0.875rem;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      color: var(--text-muted);
-    }
-
-    .chip:hover {
-      background: rgba(212, 175, 55, 0.15);
-      border-color: var(--gold);
-      color: var(--gold);
-      transform: translateY(-2px);
-    }
-
-    /* Search Container */
-    .search-container {
-      padding: 8px;
-      margin-bottom: 32px;
-      display: flex;
-      gap: 12px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-
-    .category-select {
-      padding: 16px 24px;
-      background: rgba(0, 0, 0, 0.4);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      color: var(--gold);
-      font-family: 'Space Grotesk', sans-serif;
-      font-weight: 600;
-      font-size: 0.9rem;
-      cursor: pointer;
-      outline: none;
-      transition: all 0.3s ease;
-      min-width: 180px;
-    }
-
-    .category-select:hover, .category-select:focus {
-      border-color: var(--gold);
-      box-shadow: 0 0 20px rgba(212, 175, 55, 0.2);
-    }
-
-    .search-input {
-      flex: 1;
-      min-width: 200px;
-      padding: 16px 24px;
-      background: transparent;
-      border: none;
-      color: var(--text);
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 1rem;
-      outline: none;
-    }
-
-    .search-input::placeholder {
-      color: var(--text-muted);
-    }
-
-    .scan-btn {
-      padding: 16px 40px;
-      background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);
-      border: none;
-      border-radius: 16px;
-      color: #000;
-      font-family: 'Space Grotesk', sans-serif;
-      font-weight: 700;
-      font-size: 0.9rem;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .scan-btn::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: -100%;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
-      transition: left 0.5s;
-    }
-
-    .scan-btn:hover::before {
-      left: 100%;
-    }
-
-    .scan-btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 10px 30px rgba(212, 175, 55, 0.4);
-    }
-
-    .scan-btn:active {
-      transform: translateY(0);
-    }
-
-    /* Results Area */
-    .results {
-      flex: 1;
-      min-height: 400px;
-      margin-bottom: 32px;
-    }
-
-    .empty-state {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 80px 40px;
-      text-align: center;
-      gap: 20px;
-    }
-
-    .empty-icon {
-      width: 80px;
-      height: 80px;
-      border: 2px solid var(--border);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 2rem;
-      animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.4); }
-      50% { box-shadow: 0 0 0 20px rgba(212, 175, 55, 0); }
-    }
-
-    .empty-text {
-      color: var(--text-muted);
-      font-size: 1.1rem;
-      max-width: 400px;
-    }
-
-    /* Result Cards */
-    .result-card {
-      padding: 28px;
-      margin-bottom: 20px;
-      position: relative;
-      overflow: hidden;
-      cursor: pointer;
-    }
-
-    .result-card::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 4px;
-      height: 100%;
-      background: var(--gold);
-      transform: scaleY(0);
-      transition: transform 0.3s ease;
-    }
-
-    .result-card:hover::before {
-      transform: scaleY(1);
-    }
-
-    .result-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: start;
-      margin-bottom: 16px;
-    }
-
-    .result-brand {
-      font-size: 1.25rem;
-      font-weight: 600;
-      color: var(--gold);
-      margin-bottom: 4px;
-    }
-
-    .result-model {
-      color: var(--text-muted);
-      font-size: 0.9rem;
-    }
-
-    .result-badge {
-      padding: 6px 14px;
-      background: rgba(212, 175, 55, 0.15);
-      border: 1px solid var(--border);
-      border-radius: 50px;
-      font-size: 0.75rem;
-      color: var(--gold);
-      font-weight: 600;
-    }
-
-    .result-compatibility {
-      font-size: 1rem;
-      line-height: 1.6;
-      margin-bottom: 16px;
-      color: var(--text);
-    }
-
-    .result-footer {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .match-score {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.875rem;
-    }
-
-    .score-bar {
-      width: 100px;
-      height: 4px;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 2px;
-      overflow: hidden;
-    }
-
-    .score-fill {
-      height: 100%;
-      background: linear-gradient(90deg, var(--gold-dark), var(--gold));
-      border-radius: 2px;
-      transition: width 1s ease;
-    }
-
-    .copy-btn {
-      padding: 8px 20px;
-      background: transparent;
-      border: 1px solid var(--border);
-      border-radius: 50px;
-      color: var(--text-muted);
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 0.8rem;
-      cursor: pointer;
-      transition: all 0.3s ease;
-    }
-
-    .copy-btn:hover {
-      background: var(--gold);
-      border-color: var(--gold);
-      color: #000;
-    }
-
-    /* Device Grid for Specs */
-    .device-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 24px;
-    }
-
-    .device-card {
-      padding: 24px;
-      text-align: center;
-      cursor: pointer;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .device-card:hover {
-      transform: translateY(-5px);
-    }
-
-    .device-img {
-      width: 100%;
-      height: 160px;
-      object-fit: contain;
-      margin-bottom: 16px;
-      filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5));
-      transition: transform 0.3s ease;
-    }
-
-    .device-card:hover .device-img {
-      transform: scale(1.05) translateY(-5px);
-    }
-
-    .device-name {
-      font-size: 1.1rem;
-      font-weight: 600;
-      margin-bottom: 8px;
-    }
-
-    .device-hint {
-      font-size: 0.75rem;
-      color: var(--gold);
-      text-transform: uppercase;
-      letter-spacing: 2px;
-    }
-
-    /* Footer Stats Bar */
-    .footer-stats {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 24px;
-      margin-top: auto;
-      padding-top: 24px;
-      border-top: 1px solid var(--border);
-      margin-bottom: 24px;
-    }
-
-    .footer-stat {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 24px;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .footer-stat::after {
-      content: '';
-      position: absolute;
-      bottom: 0;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 0;
-      height: 2px;
-      background: var(--gold);
-      transition: width 0.4s ease;
-    }
-
-    .footer-stat:hover::after {
-      width: 80%;
-    }
-
-    .footer-stat-label {
-      font-size: 0.7rem;
-      text-transform: uppercase;
-      letter-spacing: 3px;
-      color: var(--text-muted);
-      margin-bottom: 8px;
-      font-weight: 500;
-    }
-
-    .footer-stat-value {
-      font-size: 2.5rem;
-      font-weight: 700;
-      background: linear-gradient(135deg, var(--gold-light) 0%, var(--gold) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      line-height: 1;
-      font-variant-numeric: tabular-nums;
-      transition: transform 0.3s ease;
-    }
-
-    .footer-stat:hover .footer-stat-value {
-      transform: scale(1.1);
-      text-shadow: 0 0 30px var(--gold-glow);
-    }
-
-    /* MAIN FOOTER */
-    .main-footer {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 20px 32px;
-      border-top: 1px solid var(--border);
-      margin-top: 0;
-    }
-
-    .footer-left {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .footer-brand {
-      font-size: 1.1rem;
-      font-weight: 600;
-      color: var(--gold);
-      letter-spacing: 1px;
-    }
-
-    .footer-copy {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      font-family: 'JetBrains Mono', monospace;
-    }
-
-    .footer-right {
-      display: flex;
-      align-items: center;
-      gap: 20px;
-    }
-
-    .insta-link {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 20px;
-      background: rgba(212, 175, 55, 0.1);
-      border: 1px solid var(--border);
-      border-radius: 50px;
-      color: var(--text);
-      text-decoration: none;
-      font-size: 0.875rem;
-      font-weight: 500;
-      transition: all 0.3s ease;
-    }
-
-    .insta-link:hover {
-      background: var(--gold);
-      border-color: var(--gold);
-      color: #000;
-      transform: translateY(-2px);
-      box-shadow: 0 0 20px var(--gold-glow);
-    }
-
-    .insta-icon {
-      font-size: 1.1rem;
-    }
-
-    /* Modal */
-    .modal-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.8);
-      backdrop-filter: blur(10px);
-      z-index: 1000;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-      opacity: 0;
-      transition: opacity 0.3s ease;
-    }
-
-    .modal-overlay.active {
-      display: flex;
-      opacity: 1;
-    }
-
-    .modal {
-      width: 100%;
-      max-width: 500px;
-      padding: 40px;
-      position: relative;
-      transform: scale(0.9) translateY(20px);
-      transition: transform 0.3s ease;
-    }
-
-    .modal-overlay.active .modal {
-      transform: scale(1) translateY(0);
-    }
-
-    .modal h2 {
-      font-size: 1.75rem;
-      margin-bottom: 8px;
-      background: linear-gradient(135deg, var(--gold-light), var(--gold));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-
-    .modal p {
-      color: var(--text-muted);
-      margin-bottom: 24px;
-    }
-
-    .form-group {
-      margin-bottom: 20px;
-    }
-
-    .form-label {
-      display: block;
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      color: var(--text-muted);
-      margin-bottom: 8px;
-    }
-
-    .form-input, .form-select, .form-textarea {
-      width: 100%;
-      padding: 14px 18px;
-      background: rgba(0, 0, 0, 0.4);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      color: var(--text);
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 0.95rem;
-      outline: none;
-      transition: all 0.3s ease;
-    }
-
-    .form-input:focus, .form-select:focus, .form-textarea:focus {
-      border-color: var(--gold);
-      box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
-    }
-
-    .form-textarea {
-      resize: vertical;
-      min-height: 100px;
-    }
-
-    .modal-actions {
-      display: flex;
-      gap: 12px;
-      margin-top: 24px;
-    }
-
-    .btn-primary {
-      flex: 1;
-      padding: 14px 24px;
-      background: var(--gold);
-      border: none;
-      border-radius: 12px;
-      color: #000;
-      font-family: 'Space Grotesk', sans-serif;
-      font-weight: 600;
-      font-size: 0.9rem;
-      cursor: pointer;
-      transition: all 0.3s ease;
-    }
-
-    .btn-primary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 10px 30px rgba(212, 175, 55, 0.3);
-    }
-
-    .btn-secondary {
-      flex: 1;
-      padding: 14px 24px;
-      background: transparent;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      color: var(--text-muted);
-      font-family: 'Space Grotesk', sans-serif;
-      font-weight: 600;
-      font-size: 0.9rem;
-      cursor: pointer;
-      transition: all 0.3s ease;
-    }
-
-    .btn-secondary:hover {
-      border-color: var(--text-muted);
-      color: var(--text);
-    }
-
-    /* Loading Animation */
-    .loader {
-      display: flex;
-      gap: 8px;
-      justify-content: center;
-      align-items: center;
-      padding: 60px;
-    }
-
-    .loader-dot {
-      width: 12px;
-      height: 12px;
-      background: var(--gold);
-      border-radius: 50%;
-      animation: loader 1.4s infinite ease-in-out both;
-    }
-
-    .loader-dot:nth-child(1) { animation-delay: -0.32s; }
-    .loader-dot:nth-child(2) { animation-delay: -0.16s; }
-
-    @keyframes loader {
-      0%, 80%, 100% { transform: scale(0); opacity: 0.5; }
-      40% { transform: scale(1); opacity: 1; }
-    }
-
-    /* Responsive */
-    @media (max-width: 768px) {
-      .brand h1 { font-size: 1.75rem; }
-      .footer-stat-value { font-size: 1.75rem; }
-      .search-container { flex-direction: column; }
-      .search-input, .category-select, .scan-btn { width: 100%; }
-      .header { flex-direction: column; gap: 20px; text-align: center; }
-      .footer-stats { grid-template-columns: 1fr; gap: 12px; }
-      .main-footer { flex-direction: column; gap: 20px; text-align: center; }
-      .footer-right { justify-content: center; }
-    }
-
-    /* Scrollbar */
-    ::-webkit-scrollbar { width: 8px; }
-    ::-webkit-scrollbar-track { background: var(--bg); }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
-    ::-webkit-scrollbar-thumb:hover { background: var(--gold); }
-
-    /* Selection */
-    ::selection { background: rgba(212, 175, 55, 0.3); color: var(--text); }
-  </style>
-</head>
-<body>
-  <!-- Background Effects -->
-  <div class="bg-mesh"></div>
-  <div class="particles" id="particles"></div>
-  <div class="scan-line"></div>
-
-  <div class="app">
-    <!-- Header -->
-    <header class="glass header">
-      <div class="brand">
-        <h1>UNIPARTS</h1>
-        <span>Neural Scan Interface v2.0</span>
-      </div>
-      <div class="header-actions">
-        <div class="clock" id="clock">00:00:00</div>
-        <button class="icon-btn" onclick="openModal()" title="Submit Data">+</button>
-        <button class="icon-btn" onclick="toggleTheme()" title="Toggle Theme">◐</button>
-      </div>
-    </header>
-
-    <!-- Mode Switcher -->
-    <div class="mode-switcher glass">
-      <button class="mode-btn active" id="btnParts" onclick="setMode('parts')">Parts Search</button>
-      <button class="mode-btn" id="btnSpecs" onclick="setMode('specs')">Device Specs</button>
-    </div>
-
-    <!-- Recent Chips -->
-    <div class="recents-section">
-      <div class="section-label">Recent Scans</div>
-      <div class="chips" id="recents">
-        <span style="color: var(--text-muted); font-size: 0.875rem;">No recent scans</span>
-      </div>
-    </div>
-
-    <!-- Search -->
-    <div class="glass search-container">
-      <select class="category-select" id="categorySelect">
-        <!-- Populated by API -->
-      </select>
-      <input type="text" class="search-input" id="modelInput" placeholder="Enter device model..." autocomplete="off">
-      <button class="scan-btn" id="scanBtn" onclick="runSearch()">Scan</button>
-    </div>
-
-    <!-- Results -->
-    <div class="results" id="results">
-      <div class="glass empty-state">
-        <div class="empty-icon">⚡</div>
-        <div class="empty-text">Select a category and enter a model to begin neural scan. Press <kbd style="background: rgba(212,175,55,0.2); padding: 4px 8px; border-radius: 4px; font-family: monospace;">/</kbd> to focus.</div>
-      </div>
-    </div>
-
-    <!-- Footer Stats -->
-    <div class="footer-stats">
-      <div class="glass footer-stat">
-        <div class="footer-stat-label">Total Models</div>
-        <div class="footer-stat-value" id="sModels">—</div>
-      </div>
-      <div class="glass footer-stat">
-        <div class="footer-stat-label">Categories</div>
-        <div class="footer-stat-value" id="sCats">—</div>
-      </div>
-      <div class="glass footer-stat">
-        <div class="footer-stat-label">Active Parts</div>
-        <div class="footer-stat-value" id="sParts">—</div>
-      </div>
-    </div>
-
-    <!-- Main Footer -->
-    <footer class="glass main-footer">
-      <div class="footer-left">
-        <div class="footer-brand">MUNAX</div>
-        <div class="footer-copy">© 2026 All Rights Reserved</div>
-      </div>
-      <div class="footer-right">
-        <a href="https://instagram.com/munavi.r_" target="_blank" class="insta-link">
-          <span class="insta-icon">📷</span>
-          <span>@munavi.r_</span>
-        </a>
-      </div>
-    </footer>
-  </div>
-
-  <!-- Modal -->
-  <div class="modal-overlay" id="modal">
-    <div class="glass modal">
-      <h2>Submit Intelligence</h2>
-      <p>Contribute compatibility data to our neural network.</p>
-      
-      <div class="form-group">
-        <label class="form-label">Device Model *</label>
-        <input type="text" class="form-input" id="mModel" placeholder="e.g., iPhone 15 Pro Max">
-      </div>
-      
-      <div class="form-group">
-        <label class="form-label">Category *</label>
-        <select class="form-select" id="mCat">
-          <option value="">Select category</option>
-          <option>Battery</option>
-          <option>Display</option>
-          <option>Charging Port</option>
-          <option>Camera</option>
-          <option>Logic Board</option>
-        </select>
-      </div>
-      
-      <div class="form-group">
-        <label class="form-label">Notes</label>
-        <textarea class="form-textarea" id="mNote" placeholder="Additional compatibility information..."></textarea>
-      </div>
-      
-      <div class="modal-actions">
-        <button class="btn-secondary" onclick="closeModal()">Cancel</button>
-        <button class="btn-primary" onclick="submitData()">Send via WhatsApp</button>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    // API base injected by server
-    const API = '__API_BASE__';
-
-    // Create floating particles
-    function createParticles() {
-      const container = document.getElementById('particles');
-      for (let i = 0; i < 60; i++) {
-        const p = document.createElement('div');
-        p.className = 'particle';
-        p.style.left = Math.random() * 100 + '%';
-        p.style.animationDelay = Math.random() * 15 + 's';
-        p.style.animationDuration = (15 + Math.random() * 15) + 's';
-        container.appendChild(p);
-      }
-    }
-    createParticles();
-
-    // Clock
-    function updateClock() {
-      const now = new Date();
-      document.getElementById('clock').textContent = now.toLocaleTimeString('en-US', { hour12: false });
-    }
-    setInterval(updateClock, 1000);
-    updateClock();
-
-    // State
-    let mode = 'parts';
-    let abortCtrl = null;
-    let recentList = JSON.parse(localStorage.getItem('up_recent') || '[]');
-
-    // Mode switching
-    function setMode(m) {
-      mode = m;
-      document.getElementById('btnParts').classList.toggle('active', m === 'parts');
-      document.getElementById('btnSpecs').classList.toggle('active', m === 'specs');
-      const catSelect = document.getElementById('categorySelect');
-      catSelect.style.display = m === 'parts' ? 'block' : 'none';
-      // Clear results with appropriate empty state
-      document.getElementById('results').innerHTML = `
-        <div class="glass empty-state">
-          <div class="empty-icon">⚡</div>
-          <div class="empty-text">${m === 'parts' ? 'Select category & model to scan for compatible parts' : 'Enter device model to fetch specifications'}</div>
-        </div>
-      `;
-    }
-
-    // Recent scans
-    function saveRecent(cat, model) {
-      const key = `${cat}::${model}`;
-      recentList = [key, ...recentList.filter(r => r !== key)].slice(0, 6);
-      localStorage.setItem('up_recent', JSON.stringify(recentList));
-      renderRecents();
-    }
-
-    function renderRecents() {
-      const wrap = document.getElementById('recents');
-      if (!recentList.length) {
-        wrap.innerHTML = '<span style="color: var(--text-muted); font-size: 0.875rem;">No recent scans</span>';
-        return;
-      }
-      wrap.innerHTML = recentList.map(item => {
-        const [cat, model] = item.split('::');
-        return `<span class="chip" onclick="loadRecent('${cat}', '${model}')">${escapeHtml(model)}</span>`;
-      }).join('');
-    }
-
-    function loadRecent(cat, model) {
-      document.getElementById('modelInput').value = model;
-      if (cat && cat !== 'undefined') document.getElementById('categorySelect').value = cat;
-      runSearch();
-    }
-
-    // Load categories from API
-    async function loadCategories() {
-      try {
-        const res = await fetch(`${API}/categories`);
-        const data = await res.json();
-        const cats = data.categories || [];
-        const total = cats.reduce((s, c) => s + (c.modelCount || 0), 0);
-        
-        document.getElementById('sModels').textContent = total.toLocaleString();
-        document.getElementById('sCats').textContent = cats.length;
-        document.getElementById('sParts').textContent = cats.filter(c => c.modelCount > 0).length;
-        
-        const sel = document.getElementById('categorySelect');
-        sel.innerHTML = cats.map(c => `<option value="${c.key}">${escapeHtml(c.name)} (${c.modelCount})</option>`).join('');
-      } catch (e) {
-        console.error('Failed to load categories:', e);
-        showToast('Could not load categories', 'error');
-      }
-    }
-
-    // Parts search
-    async function partsSearch(part, model) {
-      if (!part) {
-        showToast('Please select a category', 'error');
-        return;
-      }
-      
-      setLoading(true);
-      if (abortCtrl) abortCtrl.abort();
-      abortCtrl = new AbortController();
-      
-      try {
-        const res = await fetch(`${API}/search?part=${encodeURIComponent(part)}&model=${encodeURIComponent(model)}`, {
-          signal: abortCtrl.signal
+"use strict";
+
+const http = require("http");
+const fs = require("fs");
+const path = require("path");
+const zlib = require("zlib");
+const axios = require("axios");
+const cheerio = require("cheerio");
+
+// ==================== CONFIGURATION ====================
+const PORT = parseInt(process.env.PORT, 10) || 8000;
+const NODE_ENV = process.env.NODE_ENV || "development";
+const ADMIN_KEY = process.env.ADMIN_KEY || "munax_peak_2026";
+
+const DATA_SOURCES = {
+  master: "https://combosupport.in/wp-content/uploads/appdatanew/data.php",
+  updates: "https://combosupport.in/wp-content/uploads/appdatanew/updates.php",
+  version: "https://combosupport.in/wp-content/uploads/appdatanew/version.json"
+};
+
+const REFRESH_MS = 2 * 60 * 60 * 1000;   // 2 hours
+const MAX_RESULTS = 30;
+const GZIP_THRESHOLD = 1024;
+
+const RATE_LIMITS = {
+  loose: 120,    // categories, health, updates, version
+  normal: 40,    // search
+  strict: 12,    // GSMArena calls
+  admin: 15      // admin endpoints
+};
+const RL_WINDOW_MS = 60 * 1000; // 1 minute
+
+// ==================== GLOBAL STATE ====================
+let searchIndex = {};      // categoryKey -> { name, models[] }
+let updatesList = [];
+let dataVersion = "—";
+let lastSyncTime = null;
+let syncCount = 0;
+let dashboardHtml = null;
+
+const metrics = {
+  started: new Date().toISOString(),
+  totalRequests: 0,
+  totalErrors: 0,
+  totalSearches: 0,
+  pathHits: {}
+};
+
+// ==================== UTILITIES ====================
+function normalizeForSearch(s) {
+  if (!s) return "";
+  return s.toLowerCase().replace(/[^\w\s]/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function isValidModel(s) {
+  if (!s || typeof s !== "string") return false;
+  const t = s.trim();
+  return t !== "" && t !== "New List" && !t.includes("Coming Soon");
+}
+
+function cleanModel(s) {
+  return s.replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function createCategoryKey(name) {
+  return name.toLowerCase()
+    .replace(/^\d+\.\s*/, "")          // remove leading "1. "
+    .replace(/[^a-z0-9]+/g, "_")       // special chars → underscore
+    .replace(/^_|_$/g, "");            // trim underscores
+}
+
+// ==================== RATE LIMITER ====================
+const rateStore = new Map();
+function checkRateLimit(ip, tier) {
+  const limit = RATE_LIMITS[tier] || RATE_LIMITS.normal;
+  const now = Date.now();
+  const hits = (rateStore.get(ip) || []).filter(t => now - t < RL_WINDOW_MS);
+  hits.push(now);
+  rateStore.set(ip, hits);
+  if (hits.length > limit) {
+    const retryAfter = Math.ceil((hits[0] + RL_WINDOW_MS - now) / 1000);
+    return { allowed: false, retryAfter };
+  }
+  return { allowed: true, remaining: limit - hits.length };
+}
+setInterval(() => {
+  const cutoff = Date.now() - RL_WINDOW_MS;
+  for (const [ip, hits] of rateStore) {
+    const fresh = hits.filter(t => t > cutoff);
+    if (fresh.length) rateStore.set(ip, fresh);
+    else rateStore.delete(ip);
+  }
+}, 5 * 60 * 1000).unref();
+
+// ==================== LOGGING ====================
+const LOG_DIR = path.join(__dirname, "logs");
+if (!fs.existsSync(LOG_DIR)) fs.mkdirSync(LOG_DIR, { recursive: true });
+
+function writeLog(file, entry) {
+  fs.appendFile(path.join(LOG_DIR, file), JSON.stringify(entry) + "\n", () => {});
+}
+
+function log(level, message, meta = {}) {
+  const entry = { ts: new Date().toISOString(), level, message, ...meta };
+  writeLog(`access_${entry.ts.slice(0, 10)}.jsonl`, entry);
+  if (NODE_ENV !== "production") {
+    const icon = { error: "❌", warn: "⚠️", info: "📋" }[level] || "📋";
+    console.log(`${icon} ${message}`, Object.keys(meta).length ? meta : "");
+  }
+}
+
+function logSearch(part, model, resultCount, ip) {
+  metrics.totalSearches++;
+  writeLog(`search_${new Date().toISOString().slice(0, 10)}.jsonl`, {
+    ts: new Date().toISOString(), part, model, resultCount, ip
+  });
+}
+
+async function getSearchStats() {
+  const day = new Date().toISOString().slice(0, 10);
+  try {
+    const content = await fs.promises.readFile(path.join(LOG_DIR, `search_${day}.jsonl`), "utf8");
+    const logs = content.split("\n").filter(Boolean).map(l => JSON.parse(l));
+    const byModel = {}, byPart = {};
+    logs.forEach(l => {
+      byModel[l.model] = (byModel[l.model] || 0) + 1;
+      byPart[l.part] = (byPart[l.part] || 0) + 1;
+    });
+    const top = (obj, n) => Object.entries(obj).sort((a, b) => b[1] - a[1]).slice(0, n).map(([k, v]) => ({ name: k, count: v }));
+    return { date: day, total: logs.length, topModels: top(byModel, 10), topParts: top(byPart, 10), recent: logs.slice(-30).reverse() };
+  } catch {
+    return { date: day, total: 0, topModels: [], topParts: [], recent: [] };
+  }
+}
+
+function cleanOldLogs() {
+  const cutoff = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+  try {
+    fs.readdirSync(LOG_DIR).forEach(file => {
+      const m = file.match(/^(?:access|search)_(\d{4}-\d{2}-\d{2})\.jsonl$/);
+      if (m && m[1] < cutoff) fs.unlink(path.join(LOG_DIR, file), () => {});
+    });
+  } catch (err) {}
+}
+
+// ==================== INDEX BUILDER ====================
+function buildSearchIndex(apiData) {
+  const idx = {};
+  if (!apiData.categories || !Array.isArray(apiData.categories)) return idx;
+  for (const cat of apiData.categories) {
+    if (!cat.name) continue;
+    const key = createCategoryKey(cat.name);
+    idx[key] = { name: cat.name, models: [] };
+    for (const brand of (cat.brands || [])) {
+      if (!brand.name) continue;
+      for (const rawModel of (brand.models || [])) {
+        if (!isValidModel(rawModel)) continue;
+        const compatibility = cleanModel(rawModel);
+        idx[key].models.push({
+          brand: brand.name,
+          compatibility,
+          searchNorm: normalizeForSearch(compatibility)
         });
-        const data = await res.json();
-        
-        if (data.error) throw new Error(data.error);
-        saveRecent(part, model);
-        
-        if (!data.results?.length) {
-          document.getElementById('results').innerHTML = `
-            <div class="glass empty-state">
-              <div class="empty-icon">🔍</div>
-              <div class="empty-text">No compatible parts found for "${escapeHtml(model)}"</div>
-            </div>
-          `;
-          return;
-        }
-        
-        renderResults(data.results, data.totalMatches);
-        showToast(`Found ${data.totalMatches} results`);
-      } catch (e) {
-        if (e.name !== 'AbortError') {
-          document.getElementById('results').innerHTML = `
-            <div class="glass empty-state">
-              <div class="empty-icon">⚠️</div>
-              <div class="empty-text">Error: ${escapeHtml(e.message)}</div>
-            </div>
-          `;
-        }
-      } finally {
-        setLoading(false);
-        abortCtrl = null;
       }
     }
+  }
+  return idx;
+}
 
-    // Specs search (GSMArena)
-    async function specsSearch(model) {
-      setLoading(true);
-      if (abortCtrl) abortCtrl.abort();
-      abortCtrl = new AbortController();
-      
-      try {
-        const res = await fetch(`${API}/specs-search?q=${encodeURIComponent(model)}`, {
-          signal: abortCtrl.signal
-        });
-        const data = await res.json();
-        
-        if (!data.success || !data.results?.length) {
-          document.getElementById('results').innerHTML = `
-            <div class="glass empty-state">
-              <div class="empty-icon">📱</div>
-              <div class="empty-text">No devices found matching "${escapeHtml(model)}"</div>
-            </div>
-          `;
-          return;
-        }
-        
-        renderDevices(data.results);
-      } catch (e) {
-        if (e.name !== 'AbortError') {
-          showToast('Failed to fetch specs', 'error');
-        }
-      } finally {
-        setLoading(false);
-        abortCtrl = null;
+// ==================== SEARCH ENGINE ====================
+function searchCategory(categoryKey, query) {
+  const cat = searchIndex[categoryKey];
+  if (!cat) return null;
+  const qNorm = normalizeForSearch(query);
+  if (!qNorm) return [];
+  const words = qNorm.split(" ").filter(w => w.length > 1);
+  const scored = [];
+  const seen = new Set();
+  for (const model of cat.models) {
+    const c = model.searchNorm;
+    if (seen.has(c)) continue;
+    let score = 0;
+    if (c === qNorm) score = 100;
+    else if (c.includes(qNorm)) score = 90;
+    else if (words.every(w => c.includes(w))) score = 75;
+    else {
+      const hits = words.filter(w => c.includes(w)).length;
+      if (hits > 0 && hits / words.length >= 0.7) score = 55;
+    }
+    if (score > 0) {
+      seen.add(c);
+      scored.push({ ...model, score });
+      if (scored.length >= MAX_RESULTS * 2) break;
+    }
+  }
+  return scored.sort((a, b) => b.score - a.score).slice(0, MAX_RESULTS)
+    .map(({ brand, compatibility, score }) => ({ brand, compatibility, score }));
+}
+
+// ==================== EXTERNAL DATA FETCH ====================
+async function fetchAllExternalData() {
+  log("info", "🔄 Syncing external data...");
+  let masterOk = false;
+  try {
+    const masterRes = await axios.get(DATA_SOURCES.master, { timeout: 30000 });
+    const fresh = buildSearchIndex(masterRes.data);
+    if (Object.keys(fresh).length === 0) throw new Error("Empty index");
+    searchIndex = fresh;
+    masterOk = true;
+    lastSyncTime = new Date().toISOString();
+    syncCount++;
+    const totalModels = Object.values(searchIndex).reduce((s, c) => s + c.models.length, 0);
+    log("info", `✅ Master data: ${Object.keys(searchIndex).length} categories, ${totalModels} models`);
+  } catch (err) {
+    log("error", "❌ Master fetch failed", { error: err.message });
+  }
+  try {
+    const updatesRes = await axios.get(DATA_SOURCES.updates, { timeout: 10000 });
+    if (updatesRes.data && Array.isArray(updatesRes.data.updates)) {
+      updatesList = updatesRes.data.updates;
+      log("info", `✅ Updates: ${updatesList.length} items`);
+    }
+  } catch (err) {
+    log("warn", "⚠️ Updates fetch failed");
+  }
+  try {
+    const versionRes = await axios.get(DATA_SOURCES.version, { timeout: 5000 });
+    if (versionRes.data && versionRes.data.version) {
+      dataVersion = versionRes.data.version;
+      log("info", `✅ Version: ${dataVersion}`);
+    }
+  } catch (err) {
+    log("warn", "⚠️ Version fetch failed");
+  }
+  if (!masterOk) log("error", "❌ No master data available – search will be empty");
+}
+
+// ==================== HTTP HELPERS ====================
+function getClientIp(req) {
+  return req.headers["x-forwarded-for"]?.split(",")[0].trim() || req.socket?.remoteAddress || "unknown";
+}
+
+function formatUptime(sec) {
+  const d = Math.floor(sec / 86400), h = Math.floor((sec % 86400) / 3600), m = Math.floor((sec % 3600) / 60), s = Math.floor(sec % 60);
+  return [d && `${d}d`, h && `${h}h`, m && `${m}m`, `${s}s`].filter(Boolean).join(" ");
+}
+
+function formatBytes(bytes) {
+  if (bytes < 1024) return `${bytes}B`;
+  if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)}KB`;
+  return `${(bytes / 1048576).toFixed(1)}MB`;
+}
+
+const CORS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type"
+};
+const SEC = {
+  "X-Content-Type-Options": "nosniff",
+  "X-Frame-Options": "SAMEORIGIN",
+  "X-XSS-Protection": "1; mode=block"
+};
+
+function sendJson(res, req, status, data, startTime) {
+  const body = JSON.stringify(data);
+  const buf = Buffer.from(body, "utf8");
+  const elapsed = startTime ? (Date.now() - startTime).toFixed(0) : "—";
+  const headers = {
+    "Content-Type": "application/json; charset=utf-8",
+    "X-Response-Time": `${elapsed}ms`,
+    ...CORS,
+    ...SEC
+  };
+  metrics.totalRequests++;
+  if (status >= 400) metrics.totalErrors++;
+  const acceptEncoding = req.headers["accept-encoding"] || "";
+  if (buf.length >= GZIP_THRESHOLD && acceptEncoding.includes("gzip")) {
+    zlib.gzip(buf, (err, compressed) => {
+      if (err) {
+        res.writeHead(status, { ...headers, "Content-Length": buf.length });
+        return res.end(buf);
       }
-    }
+      res.writeHead(status, { ...headers, "Content-Encoding": "gzip", "Content-Length": compressed.length });
+      res.end(compressed);
+    });
+  } else {
+    res.writeHead(status, { ...headers, "Content-Length": buf.length });
+    res.end(buf);
+  }
+}
 
-    // Render results (parts)
-    function renderResults(results, total) {
-      const html = `
-        <div style="margin-bottom: 20px; color: var(--text-muted);">
-          Showing <strong style="color: var(--gold);">${total}</strong> results
-        </div>
-        ${results.map(r => {
-          const score = Math.min(100, Math.round((r.score || 0) * 100));
-          return `
-            <div class="glass result-card">
-              <div class="result-header">
-                <div>
-                  <div class="result-brand">${escapeHtml(r.brand)}</div>
-                  <div class="result-model">${escapeHtml(r.matchType)}</div>
-                </div>
-                <span class="result-badge">${score}% Match</span>
-              </div>
-              <div class="result-compatibility">${escapeHtml(r.compatibility)}</div>
-              <div class="result-footer">
-                <div class="match-score">
-                  <span>Compatibility</span>
-                  <div class="score-bar">
-                    <div class="score-fill" style="width: ${score}%"></div>
-                  </div>
-                </div>
-                <button class="copy-btn" onclick="copyText('${escapeHtml(r.compatibility).replace(/'/g, "\\'")}')">Copy</button>
-              </div>
-            </div>
-          `;
-        }).join('')}
-      `;
-      document.getElementById('results').innerHTML = html;
-    }
+// ==================== HTTP SERVER ====================
+const server = http.createServer(async (req, res) => {
+  const start = Date.now();
+  const ip = getClientIp(req);
+  let url;
+  try {
+    url = new URL(req.url, `http://${req.headers.host}`);
+  } catch {
+    res.writeHead(400);
+    return res.end("Bad request");
+  }
+  const pathname = url.pathname;
+  metrics.pathHits[pathname] = (metrics.pathHits[pathname] || 0) + 1;
 
-    // Render device grid (specs)
-    function renderDevices(devices) {
-      const html = `
-        <div class="device-grid">
-          ${devices.map(d => `
-            <div class="glass device-card" onclick="loadSpecsDetail('${d.id}', '${escapeHtml(d.title)}', '${d.img || ''}')">
-              <img src="${d.img || ''}" class="device-img" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22%3E%3Crect fill=%22%23333%22 width=%22100%22 height=%22100%22/%3E%3Ctext fill=%22%23999%22 x=%2250%22 y=%2250%22 text-anchor=%22middle%22%3E📱%3C/text%3E%3C/svg%3E'">
-              <div class="device-name">${escapeHtml(d.title)}</div>
-              <div class="device-hint">Tap for specs</div>
-            </div>
-          `).join('')}
-        </div>
-      `;
-      document.getElementById('results').innerHTML = html;
-    }
+  if (req.method === "OPTIONS") {
+    res.writeHead(204, CORS);
+    return res.end();
+  }
+  if (req.method !== "GET") {
+    return sendJson(res, req, 405, { error: "Method not allowed" }, start);
+  }
 
-    // Load full device specs
-    async function loadSpecsDetail(id, name, img) {
-      setLoading(true);
-      try {
-        const res = await fetch(`${API}/specs-details?id=${encodeURIComponent(id)}`);
-        const data = await res.json();
-        
-        if (!data.success) throw new Error();
-        
-        const categories = Object.keys(data.specs);
-        
-        const html = `
-          <div class="glass" style="padding: 32px;">
-            <div style="display: flex; gap: 24px; margin-bottom: 32px; flex-wrap: wrap;">
-              <img src="${data.img || ''}" style="width: 120px; height: 120px; object-fit: contain; border-radius: 16px; background: rgba(0,0,0,0.3); padding: 20px;" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22120%22 height=%22120%22%3E%3Crect fill=%22%23333%22 width=%22120%22 height=%22120%22/%3E%3Ctext fill=%22%23999%22 x=%2260%22 y=%2260%22 text-anchor=%22middle%22%3E📱%3C/text%3E%3C/svg%3E'">
-              <div style="flex: 1;">
-                <h2 style="font-size: 1.75rem; margin-bottom: 8px; background: linear-gradient(135deg, var(--gold-light), var(--gold)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">${escapeHtml(data.name)}</h2>
-                <button class="copy-btn" onclick="specsBack()" style="margin-top: 12px;">← Back to Results</button>
-              </div>
-            </div>
-            
-            <div style="display: flex; gap: 12px; overflow-x: auto; margin-bottom: 24px; padding-bottom: 8px;">
-              ${categories.map((cat, i) => `
-                <button class="mode-btn ${i === 0 ? 'active' : ''}" onclick="switchTab(${i})" data-tab="${i}">${escapeHtml(cat)}</button>
-              `).join('')}
-            </div>
-            
-            <div id="specsContent" style="background: rgba(0,0,0,0.3); border-radius: 16px; padding: 24px;">
-              ${renderSpecsTable(data.specs[categories[0]])}
-            </div>
-          </div>
-        `;
-        
-        document.getElementById('results').innerHTML = html;
-        window.currentSpecs = data.specs;
-        window.specCategories = categories;
-      } catch (e) {
-        showToast('Failed to load specifications', 'error');
-      } finally {
-        setLoading(false);
+  // ---- Dashboard ----
+  if (pathname === "/" || pathname === "/dashboard") {
+    const rl = checkRateLimit(ip, "loose");
+    if (!rl.allowed) {
+      res.setHeader("Retry-After", String(rl.retryAfter));
+      return sendJson(res, req, 429, { error: "Too many requests", retryAfter: `${rl.retryAfter}s` }, start);
+    }
+    if (dashboardHtml) {
+      res.writeHead(200, { "Content-Type": "text/html", ...SEC });
+      return res.end(dashboardHtml);
+    }
+    res.writeHead(200, { "Content-Type": "text/html" });
+    return res.end("<!DOCTYPE html><html><body><h1>UNIPARTS PRO</h1><p>Starting up...</p></body></html>");
+  }
+
+  // ---- Health ----
+  if (pathname === "/health") {
+    const rl = checkRateLimit(ip, "loose");
+    if (!rl.allowed) return sendJson(res, req, 429, { error: "Rate limit" }, start);
+    const mem = process.memoryUsage();
+    const totalModels = Object.values(searchIndex).reduce((s, c) => s + c.models.length, 0);
+    return sendJson(res, req, 200, {
+      status: "operational",
+      uptime: formatUptime(process.uptime()),
+      startedAt: metrics.started,
+      environment: NODE_ENV,
+      node: process.version,
+      memory: {
+        rss: formatBytes(mem.rss),
+        heapUsed: formatBytes(mem.heapUsed),
+        heapTotal: formatBytes(mem.heapTotal)
+      },
+      data: {
+        categories: Object.keys(searchIndex).length,
+        models: totalModels,
+        version: dataVersion,
+        lastSync: lastSyncTime,
+        syncCount
+      },
+      metrics: {
+        requests: metrics.totalRequests,
+        errors: metrics.totalErrors,
+        searches: metrics.totalSearches
       }
-    }
+    }, start);
+  }
 
-    function renderSpecsTable(specs) {
-      return Object.entries(specs).map(([k, v]) => `
-        <div style="display: flex; padding: 16px 0; border-bottom: 1px solid var(--border);">
-          <div style="width: 40%; color: var(--text-muted); font-size: 0.9rem;">${escapeHtml(k)}</div>
-          <div style="flex: 1; color: var(--text); font-weight: 500;">${escapeHtml(v)}</div>
-        </div>
-      `).join('');
-    }
+  // ---- Categories ----
+  if (pathname === "/categories") {
+    const rl = checkRateLimit(ip, "loose");
+    if (!rl.allowed) return sendJson(res, req, 429, { error: "Rate limit" }, start);
+    const cats = Object.keys(searchIndex).map(key => ({
+      key,
+      name: searchIndex[key].name,
+      modelCount: searchIndex[key].models.length
+    }));
+    return sendJson(res, req, 200, { success: true, total: cats.length, categories: cats }, start);
+  }
 
-    function switchTab(idx) {
-      document.querySelectorAll('[data-tab]').forEach((btn, i) => {
-        btn.classList.toggle('active', i === idx);
+  // ---- Search ----
+  if (pathname === "/search") {
+    const rl = checkRateLimit(ip, "normal");
+    if (!rl.allowed) return sendJson(res, req, 429, { error: "Rate limit" }, start);
+    let part = (url.searchParams.get("part") || "").trim().slice(0, 80);
+    let model = (url.searchParams.get("model") || "").trim().slice(0, 100);
+    if (!part || !model) {
+      return sendJson(res, req, 400, { error: "Missing 'part' or 'model' parameters" }, start);
+    }
+    // Resolve category key
+    let categoryKey = null;
+    if (searchIndex[part]) {
+      categoryKey = part;
+    } else {
+      const cleanPart = part.toLowerCase().replace(/[^a-z0-9]/g, "");
+      categoryKey = Object.keys(searchIndex).find(k => k.replace(/[^a-z0-9]/g, "") === cleanPart)
+        || Object.keys(searchIndex).find(k => searchIndex[k].name.toLowerCase().includes(part.toLowerCase()));
+    }
+    if (!categoryKey) {
+      return sendJson(res, req, 404, {
+        error: "Category not found",
+        available: Object.keys(searchIndex).map(k => ({ key: k, name: searchIndex[k].name }))
+      }, start);
+    }
+    const results = searchCategory(categoryKey, model);
+    logSearch(part, model, results ? results.length : 0, ip);
+    return sendJson(res, req, 200, {
+      success: true,
+      category: { key: categoryKey, name: searchIndex[categoryKey].name },
+      query: model,
+      totalMatches: results ? results.length : 0,
+      results: results || []
+    }, start);
+  }
+
+  // ---- Updates ----
+  if (pathname === "/updates") {
+    const rl = checkRateLimit(ip, "loose");
+    if (!rl.allowed) return sendJson(res, req, 429, { error: "Rate limit" }, start);
+    return sendJson(res, req, 200, { success: true, updates: updatesList }, start);
+  }
+
+  // ---- Version ----
+  if (pathname === "/version") {
+    const rl = checkRateLimit(ip, "loose");
+    if (!rl.allowed) return sendJson(res, req, 429, { error: "Rate limit" }, start);
+    return sendJson(res, req, 200, { success: true, version: dataVersion, lastSync: lastSyncTime }, start);
+  }
+
+  // ---- GSMArena Search ----
+  if (pathname === "/specs-search") {
+    const rl = checkRateLimit(ip, "strict");
+    if (!rl.allowed) return sendJson(res, req, 429, { error: "Rate limit" }, start);
+    const query = (url.searchParams.get("q") || "").trim().slice(0, 80);
+    if (!query) return sendJson(res, req, 400, { error: "Missing query" }, start);
+    try {
+      const gsmRes = await axios.get(`https://www.gsmarena.com/results.php3?sQuickSearch=yes&sName=${encodeURIComponent(query)}`, {
+        headers: { "User-Agent": "Mozilla/5.0" },
+        timeout: 10000
       });
-      document.getElementById('specsContent').innerHTML = renderSpecsTable(window.currentSpecs[window.specCategories[idx]]);
+      const $ = cheerio.load(gsmRes.data);
+      const results = [];
+      $(".makers li").each((_, el) => {
+        const a = $(el).find("a");
+        const href = a.attr("href");
+        const title = a.find("img").attr("title") || a.text().trim();
+        const img = a.find("img").attr("src");
+        if (href && title) results.push({ id: href, title, img });
+      });
+      return sendJson(res, req, 200, { success: true, results }, start);
+    } catch (err) {
+      return sendJson(res, req, 502, { error: "GSMArena temporarily unavailable" }, start);
     }
+  }
 
-    function specsBack() {
-      specsSearch(document.getElementById('modelInput').value);
+  // ---- GSMArena Details ----
+  if (pathname === "/specs-details") {
+    const rl = checkRateLimit(ip, "strict");
+    if (!rl.allowed) return sendJson(res, req, 429, { error: "Rate limit" }, start);
+    const id = (url.searchParams.get("id") || "").trim().slice(0, 120);
+    if (!id || /[<>"'\\]/.test(id) || id.includes("..") || id.includes("//")) {
+      return sendJson(res, req, 400, { error: "Invalid id" }, start);
     }
-
-    // Main search dispatcher
-    function runSearch() {
-      const model = document.getElementById('modelInput').value.trim();
-      if (!model) {
-        showToast('Please enter a model', 'error');
-        document.getElementById('modelInput').focus();
-        return;
-      }
-      if (mode === 'parts') partsSearch(document.getElementById('categorySelect').value, model);
-      else specsSearch(model);
+    try {
+      const detailRes = await axios.get(`https://www.gsmarena.com/${id}`, {
+        headers: { "User-Agent": "Mozilla/5.0" },
+        timeout: 10000
+      });
+      const $ = cheerio.load(detailRes.data);
+      const name = $(".specs-phone-name-title").text().trim();
+      const img = $(".specs-photo-main img").attr("src");
+      const specs = {};
+      $("table").each((_, table) => {
+        const head = $(table).find("th").text().trim();
+        if (!head) return;
+        specs[head] = {};
+        $(table).find("tr").each((_, row) => {
+          const k = $(row).find("td").eq(0).text().trim();
+          const v = $(row).find("td").eq(1).text().replace(/\n/g, " ").trim();
+          if (k && v) specs[head][k] = v;
+        });
+      });
+      return sendJson(res, req, 200, { success: true, name, img, specs }, start);
+    } catch (err) {
+      return sendJson(res, req, 502, { error: "GSMArena temporarily unavailable" }, start);
     }
+  }
 
-    // Loading state
-    function setLoading(loading) {
-      const btn = document.getElementById('scanBtn');
-      if (loading) {
-        btn.disabled = true;
-        btn.innerHTML = '<span class="loader-dot" style="width: 8px; height: 8px; display: inline-block; margin: 0 2px;"></span><span class="loader-dot" style="width: 8px; height: 8px; display: inline-block; margin: 0 2px;"></span><span class="loader-dot" style="width: 8px; height: 8px; display: inline-block; margin: 0 2px;"></span>';
-        document.getElementById('results').innerHTML = '<div class="glass" style="padding: 60px;"><div class="loader"><div class="loader-dot"></div><div class="loader-dot"></div><div class="loader-dot"></div></div></div>';
-      } else {
-        btn.disabled = false;
-        btn.textContent = 'Scan';
-      }
+  // ---- Admin Stats ----
+  if (pathname === "/admin/stats") {
+    const rl = checkRateLimit(ip, "admin");
+    if (!rl.allowed) return sendJson(res, req, 429, { error: "Rate limit" }, start);
+    const key = url.searchParams.get("key");
+    if (key !== ADMIN_KEY) {
+      log("warn", "Admin auth fail", { ip });
+      return sendJson(res, req, 403, { error: "Forbidden" }, start);
     }
+    const stats = await getSearchStats();
+    return sendJson(res, req, 200, { ...stats, serverMetrics: metrics }, start);
+  }
 
-    // Utilities
-    function escapeHtml(text) {
-      if (!text) return '';
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
-    }
+  // ---- Admin Refresh ----
+  if (pathname === "/admin/refresh") {
+    const rl = checkRateLimit(ip, "admin");
+    if (!rl.allowed) return sendJson(res, req, 429, { error: "Rate limit" }, start);
+    const key = url.searchParams.get("key");
+    if (key !== ADMIN_KEY) return sendJson(res, req, 403, { error: "Forbidden" }, start);
+    log("info", "Manual refresh triggered", { ip });
+    fetchAllExternalData().catch(err => log("error", "Refresh error", { error: err.message }));
+    return sendJson(res, req, 200, { success: true, message: "Refresh started" }, start);
+  }
 
-    function copyText(text) {
-      navigator.clipboard.writeText(text);
-      showToast('Copied to clipboard!');
-    }
+  // ---- 404 ----
+  return sendJson(res, req, 404, { error: "Endpoint not found" }, start);
+});
 
-    function showToast(msg, type = 'success') {
-      const t = document.createElement('div');
-      t.textContent = msg;
-      t.style.cssText = `
-        position: fixed;
-        bottom: 24px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: ${type === 'error' ? '#ff4444' : 'var(--gold)'};
-        color: ${type === 'error' ? '#fff' : '#000'};
-        padding: 14px 28px;
-        border-radius: 50px;
-        font-weight: 600;
-        z-index: 9999;
-        animation: slideUp 0.3s ease;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-      `;
-      document.body.appendChild(t);
-      setTimeout(() => t.remove(), 3000);
-    }
+server.timeout = 30000;
+server.headersTimeout = 35000;
 
-    // Modal
-    function openModal() {
-      document.getElementById('modal').classList.add('active');
-    }
+// ==================== STARTUP ====================
+process.on("uncaughtException", err => log("error", "Uncaught exception", { message: err.message, stack: err.stack }));
+process.on("unhandledRejection", reason => log("error", "Unhandled rejection", { reason: String(reason) }));
 
-    function closeModal() {
-      document.getElementById('modal').classList.remove('active');
-    }
+const DASH_PATH = path.join(__dirname, "dashboard.html");
+try {
+  if (fs.existsSync(DASH_PATH)) {
+    dashboardHtml = fs.readFileSync(DASH_PATH, "utf8");
+    log("info", "✅ Dashboard HTML loaded");
+  } else {
+    log("warn", "⚠️ dashboard.html not found – using fallback");
+  }
+} catch (err) {
+  log("warn", "⚠️ Could not read dashboard.html", { error: err.message });
+}
 
-    function submitData() {
-      const model = document.getElementById('mModel').value.trim();
-      const cat = document.getElementById('mCat').value;
-      const note = document.getElementById('mNote').value.trim();
-      
-      if (!model || !cat) {
-        showToast('Please fill required fields', 'error');
-        return;
-      }
-      
-      const text = `New Intel: ${model} | ${cat} | ${note}`;
-      window.open(`https://wa.me/918590822912?text=${encodeURIComponent(text)}`);
-      closeModal();
-      showToast('Opening WhatsApp...');
-    }
+(async () => {
+  await fetchAllExternalData();
+  server.listen(PORT, "0.0.0.0", () => {
+    const totalModels = Object.values(searchIndex).reduce((s, c) => s + c.models.length, 0);
+    console.log("\n🚀 ════════════════════════════════════════════════");
+    console.log("   UNIPARTS PRO  ·  ULTRA PEAK FINAL BOSS");
+    console.log(`   🌐 Port          : ${PORT}`);
+    console.log(`   🌍 Environment   : ${NODE_ENV}`);
+    console.log(`   📦 Categories    : ${Object.keys(searchIndex).length}`);
+    console.log(`   📱 Models        : ${totalModels.toLocaleString()}`);
+    console.log(`   🔄 Auto-refresh  : every ${REFRESH_MS / 3600000} hours`);
+    console.log(`   🔐 Admin key     : set via ADMIN_KEY env var`);
+    console.log("   ════════════════════════════════════════════════\n");
+  });
+})();
 
-    // Theme toggle (light/dark)
-    let isLight = false;
-    function toggleTheme() {
-      isLight = !isLight;
-      document.body.style.background = isLight ? '#f0f0f0' : '#050505';
-      document.body.style.color = isLight ? '#000' : '#fff';
-      document.documentElement.style.setProperty('--bg', isLight ? '#f0f0f0' : '#050505');
-      document.documentElement.style.setProperty('--surface', isLight ? 'rgba(255,255,255,0.7)' : 'rgba(15,15,20,0.6)');
-      document.documentElement.style.setProperty('--text-muted', isLight ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.6)');
-    }
+setInterval(async () => {
+  log("info", "🔄 Scheduled data refresh");
+  await fetchAllExternalData();
+}, REFRESH_MS);
 
-    // Keyboard shortcuts
-    document.addEventListener('keydown', (e) => {
-      if (e.key === '/') {
-        e.preventDefault();
-        document.getElementById('modelInput').focus();
-      }
-      if (e.key === 'Escape') closeModal();
-    });
+cleanOldLogs();
+setInterval(cleanOldLogs, 24 * 60 * 60 * 1000).unref();
 
-    document.getElementById('modelInput').addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') runSearch();
-    });
-
-    // Close modal on overlay click
-    document.getElementById('modal').addEventListener('click', (e) => {
-      if (e.target === document.getElementById('modal')) closeModal();
-    });
-
-    // Initialize everything
-    loadCategories();
-    renderRecents();
-  </script>
-</body>
-</html> 
+function shutdown(sig) {
+  console.log(`\n🛑 ${sig} – shutting down gracefully…`);
+  server.close(() => {
+    log("info", "Server closed", { sig, uptime: formatUptime(process.uptime()) });
+    process.exit(0);
+  });
+  setTimeout(() => process.exit(1), 10000).unref();
+}
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT")); 
