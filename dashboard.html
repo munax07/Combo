@@ -2,802 +2,1539 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>UNIPARTS · NEURAL SCAN</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+  <meta name="description" content="UNIPARTS by munax — Universal mobile parts compatibility database. 7000+ phone models. Kerala's most complete parts search engine.">
+  <title>UNIPARTS · munax — Final Peak</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23df9718'/%3E%3Ctext x='50' y='68' font-size='48' text-anchor='middle' fill='%23060606' font-family='monospace'%3Em%3C/text%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,300;0,400;0,600;0,700;0,900;1,700;1,900&family=IBM+Plex+Mono:wght@300;400;500;600&family=Barlow:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
+    /* ═══════════════════════════════════════════════════════════════
+       TOKENS — Final munax design system (polished)
+    ═══════════════════════════════════════════════════════════════ */
+    :root {
+      --ink:      #060606;
+      --ink-2:    #0a0a0a;
+      --ink-3:    #0f0f0f;
+      --ink-4:    #141414;
+      --ink-5:    #1a1a1a;
+
+      --amber:    #df9718;
+      --amber-2:  #c4820e;
+      --amber-3:  #a06a08;
+      --amber-hi: #f5b830;     /* brighter for small text */
+      --amb-bg:   rgba(223,151,24,0.07);
+      --amb-ring: rgba(223,151,24,0.25);
+
+      --paper:    rgba(255,255,255,0.055);
+      --paper-2:  rgba(255,255,255,0.090);
+      --paper-3:  rgba(255,255,255,0.140);
+
+      --chalk:    #e8e2d4;
+      --chalk-2:  #9e968a;
+      --chalk-3:  #5a5248;
+      --chalk-4:  #2e2820;
+
+      --ok:    #4ade80;
+      --ok-bg: rgba(74,222,128,0.08);
+      --ok-ln: rgba(74,222,128,0.22);
+      --err:   #f87171;
+      --er-bg: rgba(248,113,113,0.08);
+      --er-ln: rgba(248,113,113,0.22);
+
+      --fd: 'Barlow Condensed', sans-serif;
+      --fm: 'IBM Plex Mono', monospace;
+      --fb: 'Barlow', sans-serif;
     }
 
-    :root {
-      --bg-deep: #070b12;
-      --glass-bg: rgba(15, 25, 35, 0.65);
-      --glass-edge: rgba(255, 255, 255, 0.1);
-      --glass-edge-glow: rgba(0, 255, 255, 0.25);
-      --neon-cyan: #00f3ff;
-      --neon-pink: #ff2d75;
-      --neon-gold: #ffd966;
-      --neon-purple: #b77eff;
-      --text-primary: #f5f7fc;
-      --text-secondary: #a0b3c9;
-      --card-hover: rgba(0, 243, 255, 0.05);
-    }
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
 
     body {
-      font-family: 'Inter', sans-serif;
-      background: var(--bg-deep);
-      color: var(--text-primary);
+      font-family: var(--fb);
+      background: var(--ink);
+      color: var(--chalk);
       min-height: 100vh;
       overflow-x: hidden;
-      position: relative;
+      -webkit-font-smoothing: antialiased;
+      cursor: default;
     }
 
-    /* Animated Background */
-    .bg-aura {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: -3;
-      background: radial-gradient(circle at 20% 30%, #0a1a2a, #02060c);
-    }
-    .bg-aura::before {
+    /* grain overlay */
+    body::before {
       content: '';
-      position: absolute;
-      width: 200%;
-      height: 200%;
-      top: -50%;
-      left: -50%;
-      background: radial-gradient(circle, rgba(0, 243, 255, 0.08) 2px, transparent 2px);
-      background-size: 50px 50px;
-      animation: drift 80s linear infinite;
-      opacity: 0.5;
-    }
-    @keyframes drift {
-      0% { transform: translate(0, 0) rotate(0deg); }
-      100% { transform: translate(-15%, -15%) rotate(2deg); }
+      position: fixed; inset: 0; z-index: 9997; pointer-events: none;
+      opacity: 0.038;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      background-size: 256px 256px;
     }
 
-    /* Floating Orbs */
-    .orb {
-      position: fixed;
-      border-radius: 50%;
-      filter: blur(100px);
-      z-index: -2;
-      pointer-events: none;
-    }
-    .orb-1 {
-      width: 600px;
-      height: 600px;
-      background: radial-gradient(circle, rgba(0, 243, 255, 0.2), transparent 70%);
-      top: -200px;
-      left: -200px;
-      animation: floatOrb 22s ease-in-out infinite;
-    }
-    .orb-2 {
-      width: 700px;
-      height: 700px;
-      background: radial-gradient(circle, rgba(255, 45, 117, 0.15), transparent 70%);
-      bottom: -250px;
-      right: -250px;
-      animation: floatOrb 28s ease-in-out infinite reverse;
-    }
-    @keyframes floatOrb {
-      0%, 100% { transform: translate(0, 0) scale(1); }
-      50% { transform: translate(40px, -30px) scale(1.1); }
-    }
-
-    /* Scan line */
-    .scan-line {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 3px;
-      background: linear-gradient(90deg, transparent, var(--neon-cyan), var(--neon-pink), transparent);
-      animation: scanMove 10s linear infinite;
-      z-index: 10;
-      pointer-events: none;
-      opacity: 0.7;
-    }
-    @keyframes scanMove {
-      0% { transform: translateY(-100vh); }
-      100% { transform: translateY(100vh); }
-    }
-
-    /* Main container */
-    .app {
-      max-width: 1400px;
-      margin: 0 auto;
-      padding: 28px 24px 48px;
-      position: relative;
-      z-index: 10;
-    }
-
-    /* Glass card */
-    .glass-card {
-      background: var(--glass-bg);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border: 1px solid var(--glass-edge);
-      border-radius: 36px;
-      transition: all 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.1);
-      transform-style: preserve-3d;
-      perspective: 1200px;
-    }
-    .glass-card:hover {
-      border-color: var(--glass-edge-glow);
-      box-shadow: 0 0 25px rgba(0, 243, 255, 0.2);
-      transform: translateY(-5px);
-    }
-
-    /* Header */
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 24px 36px;
-      margin-bottom: 48px;
-      flex-wrap: wrap;
-      gap: 20px;
-    }
-    .logo h1 {
-      font-size: 2.5rem;
-      font-weight: 800;
-      background: linear-gradient(135deg, #fff, var(--neon-cyan), var(--neon-pink));
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
-      letter-spacing: -1px;
-    }
-    .logo p {
-      font-size: 0.75rem;
-      letter-spacing: 3px;
-      color: var(--text-secondary);
-      margin-top: 4px;
-    }
-    .header-stats {
-      display: flex;
-      gap: 24px;
-    }
-    .stat-pill {
-      background: rgba(0, 0, 0, 0.4);
-      border-radius: 60px;
-      padding: 8px 24px;
-      border: 1px solid var(--glass-edge);
-      font-family: monospace;
-      font-weight: 500;
-    }
-    .stat-pill i {
-      color: var(--neon-cyan);
-      margin-right: 6px;
-    }
-
-    /* Stats row */
-    .stats-row {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 28px;
-      margin-bottom: 56px;
-    }
-    .stat-item {
-      padding: 32px 20px;
-      text-align: center;
-      position: relative;
-      overflow: hidden;
-    }
-    .stat-item::before {
+    /* amber scanline */
+    body::after {
       content: '';
-      position: absolute;
-      top: 0;
-      left: -100%;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(0, 243, 255, 0.08), transparent);
-      transition: left 0.6s;
-    }
-    .stat-item:hover::before {
-      left: 100%;
-    }
-    .stat-number {
-      font-size: 3.2rem;
-      font-weight: 800;
-      background: linear-gradient(135deg, #fff, var(--neon-cyan));
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
-      line-height: 1;
-    }
-    .stat-label {
-      font-size: 0.8rem;
-      text-transform: uppercase;
-      letter-spacing: 3px;
-      color: var(--text-secondary);
-      margin-top: 12px;
+      position: fixed; inset: 0; z-index: 9996; pointer-events: none;
+      background: repeating-linear-gradient(0deg, transparent 0px, transparent 3px, rgba(245,184,48,0.008) 3px, rgba(245,184,48,0.008) 4px);
     }
 
-    /* Mode toggle */
-    .mode-toggle {
-      display: flex;
-      justify-content: center;
-      margin-bottom: 48px;
+    .amb {
+      position: fixed; border-radius: 50%;
+      filter: blur(120px); pointer-events: none; z-index: 0;
     }
-    .mode-pill {
-      display: flex;
-      background: rgba(0, 0, 0, 0.5);
-      padding: 6px;
-      border-radius: 80px;
-      border: 1px solid var(--glass-edge);
-      backdrop-filter: blur(12px);
+    .amb-a {
+      width: 800px; height: 800px;
+      background: radial-gradient(circle, rgba(245,184,48,0.09), transparent 70%);
+      top: -350px; left: -350px;
+      animation: amb-d 28s ease-in-out infinite;
     }
-    .mode-btn {
-      padding: 14px 42px;
-      border-radius: 60px;
-      font-weight: 700;
-      font-size: 1rem;
-      cursor: pointer;
-      transition: 0.25s;
-      background: transparent;
-      color: var(--text-secondary);
-      border: none;
-      letter-spacing: 1px;
+    .amb-b {
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(223,151,24,0.05), transparent 70%);
+      bottom: -200px; right: -200px;
+      animation: amb-d 36s ease-in-out infinite reverse;
     }
-    .mode-btn.active {
-      background: linear-gradient(135deg, var(--neon-cyan), var(--neon-pink));
-      color: #0a0c12;
-      box-shadow: 0 0 20px rgba(0, 243, 255, 0.5);
+    @keyframes amb-d {
+      0%,100% { transform: translate(0,0) scale(1); }
+      50%      { transform: translate(40px,-30px) scale(1.08); }
     }
 
-    /* Search card */
-    .search-card {
-      padding: 36px;
-      margin-bottom: 48px;
-    }
-    select, input, button {
-      width: 100%;
-      padding: 18px 26px;
-      margin-bottom: 24px;
-      border-radius: 40px;
-      border: 1px solid var(--glass-edge);
-      background: rgba(0, 0, 0, 0.5);
-      color: var(--text-primary);
-      font-family: inherit;
-      font-size: 1rem;
-      outline: none;
-      transition: 0.2s;
-    }
-    select:focus, input:focus {
-      border-color: var(--neon-cyan);
-      box-shadow: 0 0 0 3px rgba(0, 243, 255, 0.2);
-    }
-    button {
-      background: linear-gradient(135deg, var(--neon-cyan), var(--neon-pink));
-      color: #0a0c12;
-      font-weight: 800;
-      border: none;
-      cursor: pointer;
-      letter-spacing: 2px;
-    }
-    button:active {
-      transform: scale(0.98);
-    }
+    .page { max-width: 1520px; margin: 0 auto; padding: 0 20px; position: relative; z-index: 1; }
 
-    /* Results */
-    .results-grid {
-      display: flex;
-      flex-direction: column;
-      gap: 24px;
-      margin-bottom: 56px;
+    /* animations */
+    @keyframes curtain-drop {
+      from { clip-path: inset(0 0 100% 0); opacity: 0; }
+      to   { clip-path: inset(0 0 0% 0);   opacity: 1; }
     }
-    .result-item {
-      padding: 28px 32px;
-      background: rgba(0, 0, 0, 0.4);
-      border-left: 6px solid var(--neon-cyan);
-      transition: 0.25s;
+    @keyframes fade-up {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
     }
-    .result-item:hover {
-      background: rgba(0, 0, 0, 0.6);
-      transform: translateX(10px);
+    @keyframes fade-in {
+      from { opacity: 0; }
+      to   { opacity: 1; }
     }
-    .result-brand {
-      font-size: 1.3rem;
-      font-weight: 800;
-      color: var(--neon-cyan);
-      margin-bottom: 10px;
+    @keyframes word-in {
+      from { opacity: 0; transform: translateY(14px) skewY(2deg); }
+      to   { opacity: 1; transform: translateY(0) skewY(0deg); }
     }
-    .result-compat {
-      font-size: 0.95rem;
-      margin-bottom: 18px;
-      line-height: 1.6;
+    @keyframes pulse-ring {
+      0%,100% { opacity: 1; } 50% { opacity: 0.35; }
     }
-    .result-footer {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .copy-btn {
-      background: rgba(255, 255, 255, 0.08);
-      border: none;
-      padding: 6px 24px;
-      border-radius: 40px;
-      font-size: 0.75rem;
-      cursor: pointer;
-    }
-    .copy-btn:hover {
-      background: var(--neon-cyan);
-      color: #000;
-    }
-
-    /* Device grid */
-    .device-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-      gap: 28px;
-    }
-    .device-tile {
-      padding: 28px 16px;
-      text-align: center;
-      cursor: pointer;
-      transition: 0.25s;
-    }
-    .device-tile:hover {
-      transform: translateY(-8px);
-      background: rgba(0, 0, 0, 0.6);
-      border-color: var(--neon-cyan);
-    }
-    .device-img {
-      width: 100%;
-      height: 140px;
-      object-fit: contain;
-      margin-bottom: 16px;
-    }
-    .device-name {
-      font-weight: 600;
-    }
-
-    /* Info panel */
-    .info-grid {
-      display: grid;
-      grid-template-columns: 2fr 1fr;
-      gap: 28px;
-      margin-bottom: 56px;
-    }
-    .info-card {
-      padding: 28px;
-    }
-    .updates-list {
-      max-height: 220px;
-      overflow-y: auto;
-      margin-top: 20px;
-    }
-    .update-entry {
-      padding: 12px 16px;
-      margin-bottom: 12px;
-      background: rgba(255, 255, 255, 0.03);
-      border-radius: 28px;
-      font-size: 0.85rem;
-      border-left: 3px solid var(--neon-pink);
-    }
-    .version-display {
-      font-size: 3rem;
-      font-weight: 800;
-      text-align: center;
-      color: var(--neon-gold);
-      margin: 25px 0;
-    }
-    .sync-status {
-      text-align: center;
-      font-size: 0.75rem;
-      color: var(--text-secondary);
-    }
-
-    /* Recent scans */
-    .recent-section {
-      margin-top: 24px;
-      margin-bottom: 48px;
-      padding: 20px 28px;
-    }
-    .chips-container {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 14px;
-      margin-top: 16px;
-    }
-    .recent-chip {
-      background: rgba(255, 255, 255, 0.05);
-      padding: 8px 22px;
-      border-radius: 60px;
-      font-size: 0.85rem;
-      cursor: pointer;
-      border: 1px solid var(--glass-edge);
-    }
-    .recent-chip:hover {
-      background: var(--neon-cyan);
-      color: #0a0c12;
-      border-color: var(--neon-cyan);
-    }
-
-    /* Footer */
-    .footer {
-      text-align: center;
-      padding: 36px 20px;
-      border-top: 1px solid var(--glass-edge);
-    }
-    .footer-name {
-      font-size: 1.5rem;
-      font-weight: 700;
-      background: linear-gradient(135deg, #fff, var(--neon-pink));
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
-    }
-    .footer-links {
-      display: flex;
-      justify-content: center;
-      gap: 32px;
-      margin: 16px 0;
-    }
-    .footer-links a {
-      color: var(--text-secondary);
-      text-decoration: none;
-      font-size: 0.9rem;
-    }
-    .footer-links a:hover {
-      color: var(--neon-cyan);
-    }
-
-    /* Loader */
-    .loader {
-      text-align: center;
-      padding: 70px;
-    }
-    .loader::after {
-      content: '';
-      display: inline-block;
-      width: 48px;
-      height: 48px;
-      border: 4px solid var(--neon-cyan);
-      border-top-color: transparent;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
+    @keyframes shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
     }
     @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes slide-r {
+      from { opacity: 0; transform: translateX(-12px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes toast-up {
+      from { opacity: 0; transform: translate(-50%, 16px) scale(0.93); }
+      to   { opacity: 1; transform: translate(-50%, 0) scale(1); }
+    }
+    @keyframes count-in {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes line-grow {
+      from { transform: scaleX(0); }
+      to   { transform: scaleX(1); }
+    }
 
-    @media (max-width: 800px) {
-      .stats-row { grid-template-columns: 1fr; gap: 20px; }
-      .info-grid { grid-template-columns: 1fr; }
-      .mode-btn { padding: 10px 24px; font-size: 0.85rem; }
-      .logo h1 { font-size: 1.8rem; }
-      .header { flex-direction: column; text-align: center; }
+    .fu  { animation: fade-up  0.6s cubic-bezier(0.22,1,0.36,1) both; }
+    .fi  { animation: fade-in  0.5s ease both; }
+    .cd  { animation: curtain-drop 0.7s cubic-bezier(0.22,1,0.36,1) both; }
+    .d1  { animation-delay: .08s; }  .d2 { animation-delay: .16s; }
+    .d3  { animation-delay: .24s; }  .d4 { animation-delay: .32s; }
+    .d5  { animation-delay: .40s; }  .d6 { animation-delay: .48s; }
+    .d7  { animation-delay: .56s; }  .d8 { animation-delay: .64s; }
+    .d9  { animation-delay: .72s; }  .d10{ animation-delay: .80s; }
+
+    /* navigation */
+    .nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+      height: 58px;
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 0 28px;
+      background: rgba(6,6,6,0.92);
+      border-bottom: 1px solid var(--paper);
+      backdrop-filter: blur(20px);
+    }
+    .nav::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, transparent 0%, var(--amber-2) 20%, var(--amber-hi) 50%, var(--amber-2) 80%, transparent 100%);
+      animation: line-grow 1.2s cubic-bezier(0.22,1,0.36,1) both;
+      transform-origin: left;
+    }
+    .nav-logo {
+      font-family: var(--fd);
+      font-weight: 900;
+      font-size: 20px;
+      letter-spacing: 2px;
+      text-decoration: none;
+      display: flex;
+      align-items: baseline;
+      gap: 0;
+    }
+    .nl-m {
+      background: linear-gradient(135deg, var(--amber-hi) 0%, var(--amber) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .nl-s { color: var(--chalk-3); font-weight: 300; margin: 0 7px; }
+    .nl-u { color: var(--chalk); }
+    .nav-links { display: flex; align-items: center; gap: 2px; }
+    .nav-links a {
+      font-family: var(--fm);
+      font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+      color: var(--chalk-3); text-decoration: none;
+      padding: 6px 12px; border-radius: 1px;
+      transition: color 0.2s, background 0.2s;
+    }
+    .nav-links a:hover { color: var(--amber); background: var(--amb-bg); }
+    .nav-r { display: flex; align-items: center; gap: 9px; }
+    .nav-status {
+      display: flex; align-items: center; gap: 6px;
+      font-family: var(--fm); font-size: 10px;
+      padding: 5px 13px; border-radius: 1px;
+      color: var(--ok); background: var(--ok-bg);
+      border: 1px solid var(--ok-ln);
+      transition: all 0.3s;
+    }
+    .nav-status.off { color: var(--err); background: var(--er-bg); border-color: var(--er-ln); }
+    .ns-dot {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: currentColor; flex-shrink: 0;
+      animation: pulse-ring 2s ease infinite;
+    }
+    .nav-status.off .ns-dot { animation: none; }
+    .nav-wa {
+      display: flex; align-items: center; gap: 6px;
+      font-family: var(--fm); font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
+      padding: 6px 14px; background: #128c3e; border: none; border-radius: 1px;
+      color: #fff; text-decoration: none; transition: all 0.2s;
+    }
+    .nav-wa:hover { background: #1aad4e; }
+    .nav-clock {
+      font-family: var(--fm); font-size: 10px;
+      color: var(--chalk-3); letter-spacing: 2px;
+      padding: 5px 10px;
+      border: 1px solid var(--paper);
+      border-radius: 1px;
+    }
+    .nav-theme {
+      font-family: var(--fm); font-size: 10px;
+      color: var(--chalk-3); padding: 5px 11px;
+      border: 1px solid var(--paper); border-radius: 1px;
+      cursor: pointer; transition: all 0.2s; user-select: none;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .nav-theme:hover { color: var(--amber); border-color: var(--amb-ring); background: var(--amb-bg); }
+    .hamburger {
+      display: none; flex-direction: column; gap: 5px;
+      cursor: pointer; padding: 5px;
+    }
+    .hamburger span {
+      display: block; width: 20px; height: 1.5px;
+      background: var(--chalk-3); border-radius: 1px; transition: all 0.3s;
+    }
+    .mobile-menu {
+      display: none;
+      position: fixed; top: 58px; left: 0; right: 0;
+      background: rgba(6,6,6,0.98);
+      border-bottom: 1px solid var(--paper);
+      padding: 12px 20px;
+      flex-direction: column; gap: 2px;
+      z-index: 999;
+    }
+    .mobile-menu a {
+      font-family: var(--fm); font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+      color: var(--chalk-3); text-decoration: none;
+      padding: 10px 0; border-bottom: 1px solid var(--paper);
+      transition: color 0.2s;
+    }
+    .mobile-menu a:last-child { border-bottom: none; }
+    .mobile-menu a:hover { color: var(--amber); }
+    .mobile-menu.open { display: flex; }
+
+    /* hero */
+    .hero {
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+      justify-content: center; align-items: flex-start;
+      padding: 120px 0 80px;
+      position: relative;
+    }
+    .hero::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(var(--paper) 1px, transparent 1px), linear-gradient(90deg, var(--paper) 1px, transparent 1px);
+      background-size: 80px 80px;
+      mask-image: radial-gradient(ellipse 90% 70% at 30% 50%, black 20%, transparent 75%);
+      -webkit-mask-image: radial-gradient(ellipse 90% 70% at 30% 50%, black 20%, transparent 75%);
+      pointer-events: none;
+    }
+    .hero-tag {
+      font-family: var(--fm);
+      font-size: 10px; letter-spacing: 5px; text-transform: uppercase;
+      color: var(--amber-2);
+      margin-bottom: 24px;
+      display: flex; align-items: center; gap: 12px;
+      animation: fade-in 0.6s ease both;
+    }
+    .hero-tag::before {
+      content: '';
+      display: block; width: 40px; height: 1px;
+      background: var(--amber-2);
+    }
+    .hero-headline {
+      font-family: var(--fd);
+      font-weight: 900;
+      font-size: clamp(72px, 12vw, 160px);
+      line-height: 0.88;
+      letter-spacing: -2px;
+      margin-bottom: 28px;
+      overflow: hidden;
+    }
+    .hero-word {
+      display: inline-block;
+      animation: word-in 0.7s cubic-bezier(0.22,1,0.36,1) both;
+    }
+    .hero-word:nth-child(1) { animation-delay: 0.1s; }
+    .hero-word:nth-child(2) { animation-delay: 0.22s; margin-right: 0.15em; }
+    .hero-word:nth-child(3) { animation-delay: 0.34s; }
+    .hw-amber {
+      background: linear-gradient(135deg, var(--amber-hi) 0%, var(--amber) 60%, var(--amber-2) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero-sub {
+      font-family: var(--fb);
+      font-size: clamp(15px, 1.8vw, 18px);
+      color: var(--chalk-2);
+      max-width: 520px;
+      line-height: 1.75;
+      margin-bottom: 44px;
+      animation: fade-up 0.7s cubic-bezier(0.22,1,0.36,1) 0.45s both;
+    }
+    .hero-cta {
+      display: flex; gap: 12px; flex-wrap: wrap;
+      animation: fade-up 0.7s cubic-bezier(0.22,1,0.36,1) 0.55s both;
+      margin-bottom: 80px;
+    }
+    .btn-amber {
+      display: flex; align-items: center; gap: 9px;
+      padding: 14px 30px;
+      background: var(--amber-2);
+      border: none; border-radius: 1px;
+      font-family: var(--fd); font-weight: 700;
+      font-size: 15px; letter-spacing: 2.5px; text-transform: uppercase;
+      color: var(--ink); cursor: pointer; text-decoration: none;
+      transition: all 0.2s;
+      box-shadow: 0 0 0 0 rgba(223,151,24,0);
+    }
+    .btn-amber:hover {
+      background: var(--amber-hi);
+      box-shadow: 0 8px 32px rgba(223,151,24,0.35);
+      transform: translateY(-1px);
+    }
+    .btn-wire {
+      display: flex; align-items: center; gap: 9px;
+      padding: 14px 30px;
+      background: transparent;
+      border: 1px solid var(--paper-2); border-radius: 1px;
+      font-family: var(--fd); font-weight: 700;
+      font-size: 15px; letter-spacing: 2.5px; text-transform: uppercase;
+      color: var(--chalk-2); cursor: pointer; text-decoration: none;
+      transition: all 0.2s;
+    }
+    .btn-wire:hover { color: var(--chalk); border-color: var(--paper-3); background: var(--paper); }
+    .hero-stats {
+      display: flex; gap: 0;
+      border: 1px solid var(--paper);
+      border-radius: 1px;
+      overflow: hidden;
+      animation: fade-up 0.7s cubic-bezier(0.22,1,0.36,1) 0.65s both;
+      width: fit-content;
+    }
+    .hs {
+      padding: 20px 32px;
+      border-right: 1px solid var(--paper);
+      text-align: left;
+    }
+    .hs:last-child { border-right: none; }
+    .hs-val {
+      font-family: var(--fd);
+      font-weight: 900; font-size: 38px; line-height: 1;
+      display: block;
+      animation: count-in 0.6s ease both;
+    }
+    .hs-val.amber {
+      background: linear-gradient(135deg, var(--amber-hi), var(--amber));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hs-lbl {
+      font-family: var(--fm); font-size: 10px; letter-spacing: 2.5px;
+      text-transform: uppercase; color: var(--chalk-3);
+      display: block; margin-top: 5px;
+    }
+    .scroll-cue {
+      position: absolute; bottom: 32px; left: 0;
+      display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
+      font-family: var(--fm); font-size: 9px; letter-spacing: 3px;
+      text-transform: uppercase; color: var(--chalk-4);
+      animation: fade-in 1s ease 1.2s both;
+    }
+    .scroll-cue i { animation: pulse-ring 2s ease infinite; }
+
+    /* sections */
+    .sec { padding: 100px 0; }
+    .sec-tag {
+      font-family: var(--fm); font-size: 10px; letter-spacing: 4px;
+      text-transform: uppercase; color: var(--amber-2);
+      margin-bottom: 14px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .sec-tag i { font-size: 9px; }
+    .sec-h {
+      font-family: var(--fd); font-weight: 900;
+      font-size: clamp(40px, 5.5vw, 72px);
+      line-height: 0.92; letter-spacing: -1px;
+      margin-bottom: 16px; color: var(--chalk);
+    }
+    .sec-sub {
+      font-family: var(--fb); font-size: 16px;
+      color: var(--chalk-2); line-height: 1.75;
+      max-width: 540px;
+    }
+    .rule {
+      width: 100%; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--paper-2), transparent);
+    }
+
+    /* features grid */
+    .feat-header { margin-bottom: 64px; }
+    .feat-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      grid-template-rows: auto auto;
+      gap: 1px;
+      background: var(--paper);
+      border: 1px solid var(--paper);
+    }
+    .feat {
+      background: var(--ink-2);
+      padding: 36px;
+      position: relative;
+      overflow: hidden;
+      transition: background 0.25s;
+    }
+    .feat:hover { background: var(--ink-3); }
+    .feat::after {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, var(--amber-2), transparent);
+      opacity: 0; transform: scaleX(0); transform-origin: left;
+      transition: opacity 0.3s, transform 0.4s cubic-bezier(0.22,1,0.36,1);
+    }
+    .feat:hover::after { opacity: 1; transform: scaleX(1); }
+    .feat.large { grid-column: 1; grid-row: 1 / 3; display: flex; flex-direction: column; }
+    .feat-num {
+      font-family: var(--fm); font-size: 10px; letter-spacing: 3px;
+      color: var(--chalk-4); margin-bottom: 32px;
+    }
+    .feat-ico {
+      width: 48px; height: 48px; border-radius: 1px;
+      background: var(--amb-bg); border: 1px solid var(--amb-ring);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; color: var(--amber-2);
+      margin-bottom: 20px;
+    }
+    .feat-title {
+      font-family: var(--fd); font-weight: 700;
+      font-size: 26px; letter-spacing: 0.3px; color: var(--chalk);
+      margin-bottom: 10px;
+    }
+    .feat-desc {
+      font-family: var(--fb); font-size: 14px;
+      color: var(--chalk-2); line-height: 1.75;
+    }
+    .feat-mock {
+      margin-top: auto;
+      padding-top: 32px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .mock-row {
+      background: var(--ink-4);
+      border: 1px solid var(--paper);
+      border-left: 2px solid var(--amber-2);
+      padding: 10px 14px;
+      border-radius: 1px;
+    }
+    .mock-brand {
+      font-family: var(--fm); font-size: 9px; letter-spacing: 1px;
+      color: var(--amber); margin-bottom: 4px;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .mock-brand i { font-size: 8px; }
+    .mock-text { font-family: var(--fm); font-size: 11px; color: var(--chalk-2); line-height: 1.6; }
+
+    /* tool layout */
+    .tool-layout {
+      display: grid;
+      grid-template-columns: 1fr 290px;
+      gap: 16px;
+      align-items: start;
+      margin-top: 64px;
+    }
+    .tl { display: flex; flex-direction: column; gap: 14px; }
+    .tr { display: flex; flex-direction: column; gap: 12px; position: sticky; top: 74px; }
+    .pn {
+      background: var(--ink-2);
+      border: 1px solid var(--paper);
+      border-radius: 1px;
+      overflow: hidden;
+    }
+    .ph {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 11px 18px;
+      border-bottom: 1px solid var(--paper);
+      background: rgba(0,0,0,0.25);
+    }
+    .ph-title {
+      font-family: var(--fm); font-size: 10px; letter-spacing: 3px;
+      text-transform: uppercase; color: var(--chalk-2);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .ph-title::before {
+      content: '';
+      width: 3px; height: 3px; border-radius: 50%;
+      background: var(--amber); box-shadow: 0 0 6px var(--amber-2);
+      flex-shrink: 0;
+    }
+    .ph-tag {
+      font-family: var(--fm); font-size: 9px; letter-spacing: 1px;
+      padding: 3px 10px; border-radius: 1px;
+      background: var(--ink-4); border: 1px solid var(--paper);
+      color: var(--chalk-3); transition: all 0.3s;
+    }
+    .ph-tag.on { background: var(--amb-bg); border-color: var(--amb-ring); color: var(--amber-hi); }
+    .ph-tag.ok { background: var(--ok-bg); border-color: var(--ok-ln); color: var(--ok); }
+    .mode-track {
+      display: flex; gap: 4px; padding: 5px;
+      background: var(--ink-3); border-bottom: 1px solid var(--paper);
+    }
+    .mode-btn {
+      flex: 1; padding: 8px 16px;
+      background: transparent; border: none; border-radius: 1px;
+      font-family: var(--fd); font-weight: 700; font-size: 13px;
+      letter-spacing: 1.5px; text-transform: uppercase;
+      color: var(--chalk-3); cursor: pointer;
+      transition: all 0.2s;
+      display: flex; align-items: center; justify-content: center; gap: 7px;
+    }
+    .mode-btn.on {
+      background: var(--amber-2); color: var(--ink);
+    }
+    .mode-btn:not(.on):hover { color: var(--chalk); background: var(--paper); }
+    .sb { padding: 16px 18px 18px; }
+    .irow { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+    .field { flex: 1 1 200px; }
+    .f-lbl {
+      font-family: var(--fm); font-size: 10px; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--chalk-3);
+      margin-bottom: 6px; display: flex; align-items: center; gap: 5px;
+    }
+    .f-lbl i { font-size: 9px; color: var(--amber-3); }
+    .field select, .field input {
+      width: 100%; padding: 10px 13px;
+      background: var(--ink-3); border: 1px solid var(--paper);
+      border-radius: 1px;
+      font-family: var(--fb); font-size: 14px; font-weight: 500;
+      color: var(--chalk); outline: none; appearance: none; -webkit-appearance: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .field select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%235a5248' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 12px center;
+      padding-right: 32px; cursor: pointer;
+    }
+    .field input::placeholder { color: var(--chalk-4); }
+    .field select:focus, .field input:focus {
+      border-color: var(--amb-ring);
+      box-shadow: 0 0 0 3px var(--amb-bg);
+      background: var(--ink-4);
+    }
+    .btn-srch {
+      flex-shrink: 0;
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 24px;
+      background: var(--amber-2); border: none; border-radius: 1px;
+      font-family: var(--fd); font-weight: 700;
+      font-size: 13px; letter-spacing: 2px; text-transform: uppercase;
+      color: var(--ink); cursor: pointer; transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .btn-srch:hover:not(:disabled) { background: var(--amber-hi); transform: translateY(-1px); }
+    .btn-srch:disabled { opacity: 0.28; cursor: not-allowed; transform: none; }
+    .clear-btn {
+      margin-left: 8px;
+      background: var(--ink-4);
+      border: 1px solid var(--paper);
+      color: var(--chalk-3);
+      padding: 10px 16px;
+      font-family: var(--fm);
+      font-size: 10px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .clear-btn:hover { background: var(--ink-5); color: var(--chalk); border-color: var(--paper-2); }
+
+    .rec-strip {
+      padding: 8px 18px 13px; border-top: 1px solid var(--paper);
+    }
+    .rec-lbl {
+      font-family: var(--fm); font-size: 10px; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--chalk-3);
+      margin-bottom: 7px; display: flex; align-items: center; gap: 5px;
+    }
+    .rec-lbl i { font-size: 9px; color: var(--amber-3); }
+    .chip-row { display: flex; flex-wrap: wrap; gap: 5px; }
+    .r-chip {
+      display: flex; align-items: center; gap: 5px;
+      font-family: var(--fm); font-size: 9px; letter-spacing: 0.5px;
+      padding: 4px 10px;
+      background: var(--ink-3); border: 1px solid var(--paper);
+      border-radius: 1px; color: var(--chalk-2);
+      cursor: pointer; transition: all 0.15s; white-space: nowrap;
+    }
+    .r-chip i { font-size: 8px; color: var(--chalk-3); }
+    .r-chip:hover { background: var(--amb-bg); border-color: var(--amb-ring); color: var(--amber-hi); }
+
+    .empty {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 52px 20px; text-align: center; gap: 12px;
+    }
+    .empty-ico {
+      width: 52px; height: 52px; border-radius: 1px;
+      border: 1px solid var(--paper); background: var(--ink-3);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; color: var(--chalk-3); margin-bottom: 4px;
+    }
+    .empty-title {
+      font-family: var(--fm); font-size: 10px;
+      letter-spacing: 3px; text-transform: uppercase; color: var(--chalk-3);
+    }
+    .empty-desc {
+      font-family: var(--fb); font-size: 13px;
+      color: var(--chalk-4); line-height: 1.65; max-width: 270px;
+    }
+    .sk-wrap { padding: 14px 18px; display: flex; flex-direction: column; gap: 16px; }
+    .sk {
+      background: linear-gradient(90deg, var(--ink-3) 0%, var(--ink-4) 50%, var(--ink-3) 100%);
+      background-size: 200% 100%;
+      animation: shimmer 1.6s ease infinite; border-radius: 1px;
+    }
+    .sk-a { height: 16px; width: 80px; }
+    .sk-b { height: 52px; }
+    .sk-c { height: 12px; width: 42%; margin-top: 5px; }
+    .spin-wrap {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 50px 20px; gap: 14px;
+    }
+    .spinner {
+      width: 26px; height: 26px;
+      border: 2px solid var(--paper);
+      border-top-color: var(--amber);
+      border-radius: 50%; animation: spin 0.7s linear infinite;
+    }
+    .spin-lbl {
+      font-family: var(--fm); font-size: 10px;
+      letter-spacing: 2px; text-transform: uppercase; color: var(--chalk-3);
+    }
+
+    .rc {
+      padding: 15px 18px; border-bottom: 1px solid var(--paper);
+      transition: background 0.15s;
+      animation: slide-r 0.3s cubic-bezier(0.22,1,0.36,1) both;
+    }
+    .rc:last-child { border-bottom: none; }
+    .rc:hover { background: rgba(255,255,255,0.013); }
+    .rc.exact { border-left: 2px solid var(--amber-2); }
+    .rc-head {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 9px; flex-wrap: wrap; gap: 5px;
+    }
+    .rc-brand {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--fm); font-size: 9px; font-weight: 600;
+      padding: 3px 10px; background: var(--ink-4);
+      border: 1px solid var(--paper); border-radius: 1px; color: var(--chalk-2);
+    }
+    .rc-brand i { font-size: 8px; color: var(--chalk-3); }
+    .rc.exact .rc-brand { background: var(--amb-bg); border-color: var(--amb-ring); color: var(--amber-hi); }
+    .rc-score {
+      font-family: var(--fm); font-size: 8px; padding: 1px 7px;
+      border-radius: 1px; background: var(--amb-bg); color: var(--amber);
+    }
+    .rc-match {
+      font-family: var(--fm); font-size: 9px; letter-spacing: 1px;
+      text-transform: uppercase; padding: 2px 8px;
+      border: 1px solid var(--paper); background: var(--ink-3);
+      border-radius: 1px; color: var(--chalk-3);
+    }
+    .rc-match.e { color: var(--amber-2); border-color: var(--amb-ring); background: var(--amb-bg); }
+    .rc-match.s { color: var(--ok); border-color: var(--ok-ln); background: var(--ok-bg); }
+    .rc-match.g { color: #93c5fd; border-color: rgba(147,197,253,0.2); background: rgba(147,197,253,0.07); }
+    .compat {
+      font-family: var(--fm); font-size: 12px; line-height: 1.9;
+      color: var(--chalk); background: var(--ink-3);
+      border: 1px solid var(--paper);
+      border-left: 2px solid var(--paper-2);
+      padding: 11px 13px; border-radius: 1px;
+      word-break: break-word; transition: border-color 0.2s;
+    }
+    .rc.exact .compat { border-left-color: var(--amber-2); }
+    .rc:hover .compat { border-left-color: var(--amber-3); }
+    .rc-foot {
+      display: flex; justify-content: space-between;
+      align-items: center; margin-top: 7px;
+    }
+    .rc-pct { font-family: var(--fm); font-size: 9px; color: var(--chalk-3); display: flex; align-items: center; gap: 4px; }
+    .rc-pct i { font-size: 8px; color: var(--amber-3); }
+    .copy-btn {
+      display: flex; align-items: center; gap: 5px;
+      font-family: var(--fm); font-size: 9px; letter-spacing: 1px; text-transform: uppercase;
+      padding: 4px 10px; background: var(--ink-4);
+      border: 1px solid var(--paper); border-radius: 1px;
+      color: var(--chalk-3); cursor: pointer; transition: all 0.2s;
+    }
+    .copy-btn:hover { background: var(--amb-bg); border-color: var(--amb-ring); color: var(--amber-hi); }
+    .copy-btn.done { color: var(--ok); border-color: var(--ok-ln); background: var(--ok-bg); }
+
+    .dev-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px,1fr));
+      gap: 1px; background: var(--paper);
+    }
+    .dev {
+      padding: 18px 12px; background: var(--ink-2);
+      cursor: pointer; text-align: center;
+      transition: background 0.2s;
+      animation: fade-in 0.35s ease both;
+    }
+    .dev:hover { background: var(--ink-3); }
+    .dev-img { width: 68px; height: 80px; object-fit: contain; margin-bottom: 9px; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.6)); }
+    .dev-name { font-family: var(--fb); font-size: 11px; font-weight: 500; color: var(--chalk-2); line-height: 1.4; }
+    .dev:hover .dev-name { color: var(--chalk); }
+
+    .specs-wrap { padding: 18px; }
+    .specs-name { font-family: var(--fd); font-weight: 900; font-size: 22px; letter-spacing: 0.5px; margin-bottom: 12px; }
+    .specs-img  { max-width: 100px; border-radius: 1px; margin-bottom: 12px; display: block; }
+    .spec-sec   { margin-bottom: 6px; border: 1px solid var(--paper); border-radius: 1px; overflow: hidden; }
+    .spec-sec summary {
+      padding: 9px 13px; font-family: var(--fm); font-size: 9px;
+      letter-spacing: 2px; text-transform: uppercase; color: var(--chalk-2);
+      cursor: pointer; background: var(--ink-3); list-style: none;
+      display: flex; align-items: center; gap: 8px; transition: color 0.15s;
+    }
+    .spec-sec summary i { font-size: 8px; color: var(--amber-2); transition: transform 0.2s; }
+    .spec-sec[open] summary i { transform: rotate(90deg); }
+    .spec-sec summary:hover { color: var(--chalk); }
+    .spec-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; padding: 8px 13px; border-top: 1px solid var(--paper); }
+    .spec-k { font-family: var(--fm); font-size: 10px; color: var(--chalk-3); flex-shrink: 0; max-width: 44%; }
+    .spec-v { font-family: var(--fb); font-size: 12px; color: var(--chalk-2); text-align: right; line-height: 1.5; }
+    .btn-back {
+      margin-top: 13px; display: inline-flex; align-items: center; gap: 7px;
+      padding: 7px 16px; background: var(--ink-3); border: 1px solid var(--paper);
+      border-radius: 1px; font-family: var(--fm); font-size: 9px;
+      letter-spacing: 1px; text-transform: uppercase; color: var(--chalk-2);
+      cursor: pointer; transition: all 0.2s;
+    }
+    .btn-back:hover { color: var(--chalk); border-color: var(--paper-2); }
+
+    .cats-wrap {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(175px,1fr));
+      gap: 1px; background: var(--paper);
+    }
+    .cat {
+      padding: 13px 16px;
+      display: flex; justify-content: space-between; align-items: center;
+      background: var(--ink-2);
+      font-family: var(--fb); font-size: 12px; font-weight: 500;
+      color: var(--chalk-2); cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      border: none;
+    }
+    .cat:hover { background: var(--ink-3); color: var(--chalk); }
+    .cat-n { font-family: var(--fm); font-size: 9px; color: var(--chalk-3); }
+    .cat:hover .cat-n { color: var(--amber-3); }
+
+    .hrow {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 8px 16px; border-bottom: 1px solid var(--paper);
+    }
+    .hrow:last-child { border-bottom: none; }
+    .hk { font-family: var(--fm); font-size: 9px; color: var(--chalk-3); display: flex; align-items: center; gap: 5px; }
+    .hk i { font-size: 8px; }
+    .hv { font-family: var(--fm); font-size: 10px; font-weight: 500; color: var(--chalk-2); }
+    .hv.ok   { color: var(--ok); }
+    .hv.err  { color: var(--err); }
+    .hv.amb  { color: var(--amber-hi); }
+    .trow {
+      display: flex; align-items: center; gap: 9px;
+      padding: 8px 16px; border-bottom: 1px solid var(--paper);
+      cursor: pointer; transition: background 0.15s;
+    }
+    .trow:last-child { border-bottom: none; }
+    .trow:hover { background: rgba(255,255,255,0.016); }
+    .trow:first-child { background: var(--amb-bg); }
+    .trow:first-child .t-name { color: var(--amber-hi); }
+    .trow:first-child .t-rank { color: var(--amber-hi); }
+    .t-rank { font-family: var(--fm); font-size: 9px; color: var(--chalk-3); width: 16px; text-align: right; flex-shrink: 0; }
+    .t-name { font-family: var(--fb); font-size: 12px; font-weight: 500; color: var(--chalk-2); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color 0.15s; }
+    .trow:hover .t-name { color: var(--chalk); }
+    .t-bar { width: 26px; height: 2px; background: var(--ink-4); border-radius: 1px; overflow: hidden; flex-shrink: 0; }
+    .t-bar-f { height: 100%; background: linear-gradient(90deg, var(--amber-3), var(--amber-hi)); border-radius: 1px; }
+    .t-ct { font-family: var(--fm); font-size: 9px; color: var(--chalk-3); flex-shrink: 0; min-width: 18px; text-align: right; }
+
+    .ver-block { padding: 16px 18px; text-align: center; border-bottom: 1px solid var(--paper); }
+    .ver-num {
+      font-family: var(--fd); font-weight: 900; font-size: 36px; line-height: 1;
+      background: linear-gradient(135deg, var(--amber-hi), var(--amber-2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text; display: block;
+    }
+    .ver-sync {
+      font-family: var(--fm); font-size: 9px; color: var(--chalk-3);
+      margin-top: 5px; display: flex; align-items: center; justify-content: center; gap: 5px;
+    }
+    .ver-sync i { font-size: 8px; color: var(--amber-3); }
+    .upd-list { max-height: 160px; overflow-y: auto; padding: 6px 0; }
+    .upd-list::-webkit-scrollbar { width: 2px; }
+    .upd-list::-webkit-scrollbar-thumb { background: var(--ink-5); }
+    .upd-item {
+      padding: 6px 16px; font-family: var(--fb); font-size: 12px;
+      color: var(--chalk-2); border-bottom: 1px solid var(--paper);
+      line-height: 1.5; display: flex; align-items: flex-start; gap: 7px;
+    }
+    .upd-item:last-child { border-bottom: none; }
+    .upd-item i { font-size: 8px; color: var(--amber-3); margin-top: 4px; flex-shrink: 0; }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px; background: var(--paper);
+      border: 1px solid var(--paper);
+      margin-top: 64px;
+    }
+    .step { padding: 44px 36px; background: var(--ink-2); transition: background 0.2s; }
+    .step:hover { background: var(--ink-3); }
+    .step-n {
+      font-family: var(--fd); font-weight: 900; font-size: 80px; line-height: 1;
+      color: var(--ink-4); margin-bottom: 16px; display: block;
+      transition: color 0.3s;
+    }
+    .step:hover .step-n { color: var(--ink-5); }
+    .step-title { font-family: var(--fd); font-weight: 700; font-size: 22px; margin-bottom: 10px; color: var(--chalk); }
+    .step-desc  { font-family: var(--fb); font-size: 14px; color: var(--chalk-2); line-height: 1.75; }
+
+    .comm-inner {
+      border: 1px solid var(--paper);
+      display: grid; grid-template-columns: 1fr 1fr; gap: 0;
+      position: relative; overflow: hidden;
+    }
+    .comm-inner::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--amber-2), transparent);
+    }
+    .comm-l { padding: 64px 52px; border-right: 1px solid var(--paper); }
+    .comm-r { padding: 64px 52px; display: flex; flex-direction: column; justify-content: center; gap: 18px; }
+    .comm-title { font-family: var(--fd); font-weight: 900; font-size: clamp(36px,4vw,58px); line-height: 0.92; letter-spacing: -1px; margin-bottom: 18px; }
+    .comm-sub   { font-family: var(--fb); font-size: 15px; color: var(--chalk-2); line-height: 1.75; margin-bottom: 30px; max-width: 380px; }
+    .comm-btns  { display: flex; gap: 10px; flex-wrap: wrap; }
+    .benefit {
+      display: flex; align-items: flex-start; gap: 16px;
+      padding: 18px 0; border-bottom: 1px solid var(--paper);
+    }
+    .benefit:last-child { border-bottom: none; }
+    .benefit-ico {
+      width: 38px; height: 38px; border-radius: 1px;
+      background: var(--amb-bg); border: 1px solid var(--amb-ring);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; color: var(--amber-2); flex-shrink: 0;
+    }
+    .benefit-title { font-family: var(--fd); font-weight: 700; font-size: 18px; color: var(--chalk); margin-bottom: 3px; }
+    .benefit-desc  { font-family: var(--fb); font-size: 13px; color: var(--chalk-2); line-height: 1.6; }
+
+    .about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center; margin-top: 64px; }
+    .about-para { font-family: var(--fb); font-size: 15px; color: var(--chalk-2); line-height: 1.8; margin-bottom: 18px; }
+    .about-para strong { color: var(--chalk); font-weight: 600; }
+    .contact-links { display: flex; flex-direction: column; gap: 8px; margin-top: 28px; }
+    .c-link {
+      display: flex; align-items: center; gap: 14px;
+      padding: 14px 18px; background: var(--ink-2);
+      border: 1px solid var(--paper); border-radius: 1px;
+      text-decoration: none; transition: all 0.2s;
+    }
+    .c-link:hover { border-color: var(--amb-ring); background: var(--amb-bg); }
+    .c-link i { font-size: 15px; color: var(--amber-2); width: 18px; text-align: center; }
+    .c-lbl { font-family: var(--fm); font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--chalk-3); }
+    .c-val  { font-family: var(--fb); font-size: 14px; font-weight: 500; color: var(--chalk); }
+    .about-card { border: 1px solid var(--paper); border-radius: 1px; overflow: hidden; }
+    .about-card-top {
+      padding: 22px 24px; border-bottom: 1px solid var(--paper);
+      background: var(--ink-2);
+      display: flex; align-items: center; gap: 16px;
+    }
+    .avatar {
+      width: 48px; height: 48px; border-radius: 1px;
+      background: linear-gradient(135deg, var(--amber-2), var(--amber-3));
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--fd); font-weight: 900; font-size: 22px;
+      color: var(--ink); flex-shrink: 0;
+    }
+    .a-name { font-family: var(--fd); font-weight: 700; font-size: 20px; letter-spacing: 0.5px; }
+    .a-role { font-family: var(--fm); font-size: 9px; color: var(--chalk-3); letter-spacing: 1.5px; text-transform: uppercase; margin-top: 2px; }
+    .about-stats {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 1px; background: var(--paper);
+    }
+    .ast { padding: 20px; background: var(--ink-2); text-align: center; }
+    .ast-val {
+      font-family: var(--fd); font-weight: 900; font-size: 30px; line-height: 1; display: block;
+    }
+    .ast-val.amber {
+      background: linear-gradient(135deg, var(--amber-hi), var(--amber-2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .ast-lbl { font-family: var(--fm); font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--chalk-3); display: block; margin-top: 4px; }
+
+    .site-footer {
+      border-top: 1px solid var(--paper);
+      padding: 64px 0 32px;
+      position: relative; z-index: 1;
+    }
+    .footer-top {
+      display: grid; grid-template-columns: 2fr 1fr 1fr 1fr;
+      gap: 48px; margin-bottom: 48px;
+    }
+    .f-brand-name {
+      font-family: var(--fd); font-weight: 900; font-size: 20px;
+      letter-spacing: 2px; margin-bottom: 14px; display: flex; align-items: baseline;
+    }
+    .f-brand-name .gw {
+      background: linear-gradient(135deg, var(--amber-hi), var(--amber-2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .f-brand-name .sw { color: var(--chalk-4); font-weight: 300; margin: 0 7px; }
+    .f-desc { font-family: var(--fb); font-size: 13px; color: var(--chalk-3); line-height: 1.7; max-width: 250px; margin-bottom: 20px; }
+    .f-soc { display: flex; gap: 8px; }
+    .fsoc {
+      width: 34px; height: 34px; border-radius: 1px;
+      border: 1px solid var(--paper); background: var(--ink-2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; color: var(--chalk-2); text-decoration: none;
+      transition: all 0.2s;
+    }
+    .fsoc:hover { color: var(--amber); border-color: var(--amb-ring); background: var(--amb-bg); }
+    .f-col-title { font-family: var(--fm); font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: var(--chalk-2); margin-bottom: 18px; }
+    .f-links { display: flex; flex-direction: column; gap: 10px; }
+    .f-links a {
+      font-family: var(--fb); font-size: 13px; color: var(--chalk-3);
+      text-decoration: none; transition: color 0.2s;
+      display: flex; align-items: center; gap: 7px;
+    }
+    .f-links a i { font-size: 9px; color: var(--amber-3); }
+    .f-links a:hover { color: var(--chalk); }
+    .footer-bottom {
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 12px;
+      padding-top: 28px; border-top: 1px solid var(--paper);
+    }
+    .f-copy { font-family: var(--fm); font-size: 9px; color: var(--chalk-4); letter-spacing: 2px; }
+    .f-copy span { color: var(--amber-3); }
+    .f-badge {
+      font-family: var(--fm); font-size: 9px; color: var(--chalk-3);
+      padding: 5px 13px; border: 1px solid var(--paper); border-radius: 1px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .f-badge i { font-size: 8px; color: var(--amber-3); }
+
+    .modal-bg {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.82);
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      align-items: center; justify-content: center;
+      z-index: 9000; padding: 16px;
+    }
+    .modal-card {
+      background: var(--ink-2); border: 1px solid var(--paper-2);
+      border-top: 2px solid var(--amber-2); border-radius: 1px;
+      padding: 28px; width: 100%; max-width: 390px;
+      position: relative;
+      box-shadow: 0 40px 80px rgba(0,0,0,0.8);
+      animation: fade-up 0.3s cubic-bezier(0.22,1,0.36,1);
+    }
+    .modal-x {
+      position: absolute; top: 14px; right: 16px;
+      width: 28px; height: 28px; background: var(--ink-3);
+      border: 1px solid var(--paper); border-radius: 1px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; font-size: 12px; color: var(--chalk-3); transition: all 0.2s;
+    }
+    .modal-x:hover { color: var(--chalk); border-color: var(--paper-2); }
+    .modal-title { font-family: var(--fd); font-weight: 900; font-size: 22px; letter-spacing: 1px; margin-bottom: 3px; display: flex; align-items: center; gap: 9px; }
+    .modal-title i { font-size: 15px; color: var(--amber-2); }
+    .modal-sub   { font-family: var(--fm); font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--chalk-3); margin-bottom: 16px; }
+    .modal-card input, .modal-card select, .modal-card textarea {
+      width: 100%; padding: 10px 13px; margin: 4px 0;
+      background: var(--ink-3); border: 1px solid var(--paper);
+      border-radius: 1px; font-family: var(--fb); font-size: 13px;
+      color: var(--chalk); outline: none; appearance: none; transition: border-color 0.2s;
+    }
+    .modal-card input::placeholder, .modal-card textarea::placeholder { color: var(--chalk-4); }
+    .modal-card input:focus, .modal-card select:focus, .modal-card textarea:focus { border-color: var(--amb-ring); }
+    .modal-card textarea { resize: vertical; min-height: 64px; }
+    .btn-send {
+      width: 100%; margin-top: 12px; padding: 12px;
+      background: #128c3e; border: none; border-radius: 1px;
+      font-family: var(--fd); font-weight: 700; font-size: 14px;
+      letter-spacing: 2.5px; text-transform: uppercase;
+      color: #fff; cursor: pointer; transition: all 0.2s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-send:hover { background: #1aad4e; }
+
+    .toast {
+      position: fixed; bottom: 22px; left: 50%;
+      padding: 10px 20px; border-radius: 1px;
+      font-family: var(--fm); font-size: 11px; font-weight: 500;
+      z-index: 99999; pointer-events: none;
+      animation: toast-up 0.25s ease;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.7);
+      white-space: nowrap; display: flex; align-items: center; gap: 8px;
+    }
+    .toast i { font-size: 10px; }
+    .toast.ok  { background: var(--ok);  color: var(--ink); }
+    .toast.err { background: var(--err); color: #fff; }
+
+    body.lt {
+      --ink:   #f5f0e8; --ink-2: #eee9e0; --ink-3: #e4ddd2;
+      --ink-4: #d8d0c4; --ink-5: #c8bfb2;
+      --paper: rgba(0,0,0,0.08); --paper-2: rgba(0,0,0,0.13); --paper-3: rgba(0,0,0,0.20);
+      --amber: #9a6e00; --amber-2: #b8860b; --amber-3: #c89020;
+      --amber-hi: #e4a020;
+      --amb-bg: rgba(184,134,11,0.07); --amb-ring: rgba(184,134,11,0.22);
+      --chalk: #1a1610; --chalk-2: #4a4030; --chalk-3: #8a7a60; --chalk-4: #bfad95;
+      --ok: #166534; --ok-bg: rgba(22,101,52,0.08); --ok-ln: rgba(22,101,52,0.2);
+      --err: #991b1b; --er-bg: rgba(153,27,27,0.08); --er-ln: rgba(153,27,27,0.2);
+    }
+    body.lt::before { opacity: 0.025; }
+    body.lt::after  { background: repeating-linear-gradient(0deg, transparent 0px, transparent 3px, rgba(184,134,11,0.006) 3px, rgba(184,134,11,0.006) 4px); }
+    body.lt .nav { background: rgba(245,240,232,0.93); }
+    body.lt .compat { color: #1a1610; }
+    body.lt .amb-a { background: radial-gradient(circle, rgba(184,134,11,0.08), transparent 70%); }
+
+    @media (max-width: 1100px) {
+      .footer-top { grid-template-columns: 1fr 1fr; gap: 32px; }
+      .feat-grid  { grid-template-columns: 1fr 1fr; }
+      .feat.large { grid-column: span 2; }
+    }
+    @media (max-width: 960px) {
+      .nav-links  { display: none; }
+      .hamburger  { display: flex; }
+      .tool-layout{ grid-template-columns: 1fr; }
+      .tr         { position: static; }
+      .about-grid { grid-template-columns: 1fr; gap: 40px; }
+      .comm-inner { grid-template-columns: 1fr; }
+      .comm-l     { border-right: none; border-bottom: 1px solid var(--paper); padding: 44px 36px; }
+      .comm-r     { padding: 44px 36px; }
+      .steps      { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 700px) {
+      .hero-headline { font-size: clamp(52px, 15vw, 90px); }
+      .hero-stats     { flex-direction: column; width: 100%; }
+      .hs             { border-right: none; border-bottom: 1px solid var(--paper); }
+      .hs:last-child  { border-bottom: none; }
+      .footer-top     { grid-template-columns: 1fr; gap: 24px; }
+      .feat-grid      { grid-template-columns: 1fr; }
+      .feat.large     { grid-column: span 1; }
+      .btn-srch       { width: 100%; justify-content: center; }
+      .cats-wrap      { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 480px) {
+      .page { padding: 0 14px; }
+      .hero { padding: 100px 0 60px; }
+      .sec  { padding: 72px 0; }
     }
   </style>
 </head>
 <body>
-  <div class="bg-aura"></div>
-  <div class="orb orb-1"></div>
-  <div class="orb orb-2"></div>
-  <div class="scan-line"></div>
 
-  <div class="app">
-    <header class="glass-card header">
-      <div class="logo">
-        <h1><i class="fas fa-microchip"></i> UNIPARTS</h1>
-        <p>NEURAL COMPATIBILITY SCANNER</p>
-      </div>
-      <div class="header-stats">
-        <div class="stat-pill"><i class="fas fa-code-branch"></i> v<span id="headerVersion">—</span></div>
-        <div class="stat-pill"><i class="far fa-clock"></i> <span id="liveClock">--:--:--</span></div>
-      </div>
-    </header>
+<div class="amb amb-a"></div>
+<div class="amb amb-b"></div>
 
-    <div class="stats-row">
-      <div class="glass-card stat-item"><div class="stat-number" id="statModels">—</div><div class="stat-label">TOTAL MODELS</div></div>
-      <div class="glass-card stat-item"><div class="stat-number" id="statCats">—</div><div class="stat-label">CATEGORIES</div></div>
-      <div class="glass-card stat-item"><div class="stat-number" id="statParts">—</div><div class="stat-label">COMPATIBILITY ENTRIES</div></div>
-    </div>
-
-    <div class="mode-toggle">
-      <div class="mode-pill">
-        <button class="mode-btn active" data-mode="parts"><i class="fas fa-tools"></i> PARTS SCAN</button>
-        <button class="mode-btn" data-mode="specs"><i class="fas fa-database"></i> DEVICE SPECS</button>
-      </div>
-    </div>
-
-    <div id="partsUI" class="glass-card search-card">
-      <select id="categorySelect"><option>LOADING CATEGORIES...</option></select>
-      <input type="text" id="modelInput" placeholder="Enter model (e.g., Redmi 9, iPhone 12)" autocomplete="off">
-      <button id="searchBtn"><i class="fas fa-brain"></i> START NEURAL SCAN</button>
-    </div>
-
-    <div id="specsUI" class="glass-card search-card" style="display: none;">
-      <input type="text" id="specsInput" placeholder="Search device (e.g., Samsung Galaxy S23)" autocomplete="off">
-      <button id="specsBtn"><i class="fas fa-search"></i> FETCH FROM GSMARENA</button>
-    </div>
-
-    <div id="resultsArea" class="results-grid">
-      <div class="glass-card" style="padding: 70px; text-align: center;"><i class="fas fa-robot"></i> SELECT CATEGORY & MODEL TO BEGIN</div>
-    </div>
-
-    <div class="glass-card recent-section">
-      <div style="font-size:0.75rem; letter-spacing:2px; color:var(--text-secondary);"><i class="fas fa-history"></i> RECENT SCANS</div>
-      <div class="chips-container" id="recentChips"></div>
-    </div>
-
-    <div class="info-grid">
-      <div class="glass-card info-card">
-        <div style="font-weight:700;"><i class="fas fa-newspaper"></i> LATEST UPDATES</div>
-        <div class="updates-list" id="updatesList">Loading updates...</div>
-      </div>
-      <div class="glass-card info-card">
-        <div style="font-weight:700; text-align:center;"><i class="fas fa-database"></i> DATABASE VERSION</div>
-        <div class="version-display" id="versionBadge">—</div>
-        <div class="sync-status" id="lastSyncText">Sync status: --</div>
-      </div>
-    </div>
-
-    <footer class="footer">
-      <div class="footer-name">MUNavvir</div>
-      <div class="footer-links">
-        <a href="tel:+918590822912"><i class="fas fa-phone-alt"></i> +91 85908 22912</a>
-        <a href="https://instagram.com/munavi.r_" target="_blank"><i class="fab fa-instagram"></i> @munavi.r_</a>
-      </div>
-      <div style="font-size:0.7rem; opacity:0.5;">PREMIUM NEURAL INTELLIGENCE · ULTIMATE EDITION</div>
-    </footer>
+<nav class="nav">
+  <a href="#home" class="nav-logo">
+    <span class="nl-m">munax</span>
+    <span class="nl-s">·</span>
+    <span class="nl-u">UNIPARTS</span>
+  </a>
+  <div class="nav-links">
+    <a href="#features">Features</a>
+    <a href="#search">Search</a>
+    <a href="#how">How it works</a>
+    <a href="#community">Community</a>
+    <a href="#about">About</a>
   </div>
+  <div class="nav-r">
+    <div class="nav-status" id="navStatus"><span class="ns-dot"></span><span id="navTxt">loading...</span></div>
+    <div class="nav-clock" id="clock">--:--:--</div>
+    <div class="nav-theme" id="themeBtn"><i id="thIco" class="fa-solid fa-sun"></i><span id="thLbl">Light</span></div>
+    <a href="https://wa.me/918590822912" target="_blank" class="nav-wa"><i class="fa-brands fa-whatsapp"></i> Contact</a>
+    <div class="hamburger" id="hbg"><span></span><span></span><span></span></div>
+  </div>
+</nav>
 
-  <script>
-    const API_BASE = '';
-    let currentMode = 'parts';
-    let categories = [];
-    let recentList = JSON.parse(localStorage.getItem('uniparts_pro_recent') || '[]');
+<div class="mobile-menu" id="mm">
+  <a href="#features" onclick="mm()">Features</a>
+  <a href="#search" onclick="mm()">Search Tool</a>
+  <a href="#how" onclick="mm()">How It Works</a>
+  <a href="#community" onclick="mm()">Community</a>
+  <a href="#about" onclick="mm()">About</a>
+  <a href="https://wa.me/918590822912" target="_blank">WhatsApp</a>
+</div>
 
-    const partsUI = document.getElementById('partsUI');
-    const specsUI = document.getElementById('specsUI');
-    const categorySelect = document.getElementById('categorySelect');
-    const modelInput = document.getElementById('modelInput');
-    const searchBtn = document.getElementById('searchBtn');
-    const specsInput = document.getElementById('specsInput');
-    const specsBtn = document.getElementById('specsBtn');
-    const resultsDiv = document.getElementById('resultsArea');
-    const recentChips = document.getElementById('recentChips');
-    const updatesListDiv = document.getElementById('updatesList');
-    const versionBadgeSpan = document.getElementById('versionBadge');
-    const lastSyncSpan = document.getElementById('lastSyncText');
-    const headerVersionSpan = document.getElementById('headerVersion');
+<section id="home" class="hero">
+  <div class="page" style="width:100%">
+    <div class="hero-tag fi">Mobile parts database · Kerala</div>
+    <h1 class="hero-headline">
+      <span class="hero-word">Universal</span>
+      <span class="hero-word hw-amber">Parts</span>
+      <span class="hero-word">Search</span>
+    </h1>
+    <p class="hero-sub">The most complete mobile parts compatibility database in Kerala. Find every universal part for any phone model in seconds. 7000+ models, always updated.</p>
+    <div class="hero-cta">
+      <a href="#search" class="btn-amber"><i class="fa-solid fa-bolt"></i> Start searching</a>
+      <a href="#how" class="btn-wire"><i class="fa-solid fa-circle-info"></i> How it works</a>
+    </div>
+    <div class="hero-stats">
+      <div class="hs"><span class="hs-val amber" id="heroM">7000+</span><span class="hs-lbl">Phone models</span></div>
+      <div class="hs"><span class="hs-val" id="heroC">14</span><span class="hs-lbl">Part categories</span></div>
+      <div class="hs"><span class="hs-val">2h</span><span class="hs-lbl">Refresh cycle</span></div>
+      <div class="hs"><span class="hs-val">Free</span><span class="hs-lbl">Always</span></div>
+    </div>
+    <div class="scroll-cue"><i class="fa-solid fa-arrow-down"></i> scroll to explore</div>
+  </div>
+</section>
 
-    function escapeHtml(str) {
-      if (!str) return '';
-      return str.replace(/[&<>]/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;' }[m]));
+<div class="rule"></div>
+
+<section id="features" class="sec">
+  <div class="page">
+    <div class="feat-header">
+      <div class="sec-tag fu"><i class="fa-solid fa-star"></i> Why UNIPARTS</div>
+      <h2 class="sec-h fu d1">Built for technicians.<br>Engineered for speed.</h2>
+      <p class="sec-sub fu d2">Everything a Kerala mobile repair technician needs — in one precise, always-live tool.</p>
+    </div>
+    <div class="feat-grid fu d3">
+      <div class="feat large">
+        <div class="feat-num">01 / 06</div>
+        <div class="feat-ico"><i class="fa-solid fa-bolt"></i></div>
+        <div class="feat-title">Instant Compatibility</div>
+        <p class="feat-desc">Type a phone model — get every compatible universal part instantly. Precise matching across 7000+ indexed models, scored by accuracy. No guessing, no scrolling.</p>
+        <div class="feat-mock">
+          <div class="mock-row"><div class="mock-brand"><i class="fa-solid fa-tag"></i> OG</div><div class="mock-text">Samsung A15 = Samsung A15 5G = A14 5G = M14 = M14 5G = M15</div></div>
+          <div class="mock-row"><div class="mock-brand"><i class="fa-solid fa-tag"></i> Kavitha</div><div class="mock-text">Redmi Note 13 = Note 13 Pro = Note 13 Pro+ 5G = Note 13R</div></div>
+          <div class="mock-row"><div class="mock-brand"><i class="fa-solid fa-tag"></i> Star</div><div class="mock-text">Vivo Y16 = Y22 = Y22s = Y35 = T1 5G = Y56 5G</div></div>
+        </div>
+      </div>
+      <div class="feat"><div class="feat-num">02 / 06</div><div class="feat-ico"><i class="fa-solid fa-layer-group"></i></div><div class="feat-title">All Part Types</div><p class="feat-desc">Batteries, display combos, tempered glass, back covers, middle frames, charging boards, flex cables — every major category.</p></div>
+      <div class="feat"><div class="feat-num">03 / 06</div><div class="feat-ico"><i class="fa-solid fa-microchip"></i></div><div class="feat-title">Device Specs</div><p class="feat-desc">Full technical specifications via GSMArena. Screen size, battery, chipset — know before you order the part.</p></div>
+      <div class="feat"><div class="feat-num">04 / 06</div><div class="feat-ico"><i class="fa-solid fa-rotate"></i></div><div class="feat-title">Always Updated</div><p class="feat-desc">Data syncs every 2 hours automatically. New models, new compatibility groups — always current, always reliable.</p></div>
+      <div class="feat"><div class="feat-num">05 / 06</div><div class="feat-ico"><i class="fa-solid fa-mobile-screen"></i></div><div class="feat-title">Mobile First</div><p class="feat-desc">Built for your phone at the shop counter. No app needed. Fast, clean, works on any device instantly.</p></div>
+      <div class="feat"><div class="feat-num">06 / 06</div><div class="feat-ico"><i class="fa-solid fa-users"></i></div><div class="feat-title">Community Driven</div><p class="feat-desc">Technicians across Kerala contribute missing models. The database grows stronger with every submission.</p></div>
+    </div>
+  </div>
+</section>
+
+<div class="rule"></div>
+
+<section id="search" class="sec">
+  <div class="page">
+    <div class="sec-tag fu"><i class="fa-solid fa-magnifying-glass"></i> Live database</div>
+    <h2 class="sec-h fu d1">Search compatibility now</h2>
+    <p class="sec-sub fu d2">Real-time results from the live database. Select a part, enter any phone model.</p>
+    <div class="tool-layout">
+      <div class="tl">
+        <div class="pn fu d3">
+          <div class="ph"><span class="ph-title">Compatibility search</span><span class="ph-tag" id="sTag">ready</span></div>
+          <div class="mode-track">
+            <button class="mode-btn on" data-mode="parts"><i class="fa-solid fa-screwdriver-wrench"></i> Parts scan</button>
+            <button class="mode-btn" data-mode="specs"><i class="fa-solid fa-microchip"></i> Device specs</button>
+          </div>
+          <div class="sb" id="pBd">
+            <div class="irow">
+              <div class="field"><div class="f-lbl"><i class="fa-solid fa-list"></i>Part category</div><select id="catSel"><option value="">Select category</option></select></div>
+              <div class="field"><div class="f-lbl"><i class="fa-solid fa-mobile-screen"></i>Phone model</div><input type="text" id="modIn" placeholder="e.g. Samsung A15, Redmi Note 13 Pro" autocomplete="off"></div>
+              <button class="btn-srch" id="srchBtn"><i class="fa-solid fa-bolt"></i> Search</button>
+              <button class="clear-btn" id="clearBtn" style="display:none;"><i class="fa-solid fa-eraser"></i> Clear</button>
+            </div>
+          </div>
+          <div class="sb" id="spBd" style="display:none">
+            <div class="irow">
+              <div class="field"><div class="f-lbl"><i class="fa-solid fa-magnifying-glass"></i>Device name</div><input type="text" id="spIn" placeholder="e.g. Samsung Galaxy S23, iPhone 14" autocomplete="off"></div>
+              <button class="btn-srch" id="spBtn"><i class="fa-solid fa-satellite-dish"></i> Search</button>
+            </div>
+          </div>
+          <div class="rec-strip" id="recStrip" style="display:none"><div class="rec-lbl"><i class="fa-solid fa-clock-rotate-left"></i>Recent scans</div><div class="chip-row" id="recChips"></div></div>
+        </div>
+        <div class="pn fu d4">
+          <div class="ph"><span class="ph-title" id="rTitle">Compatibility results</span><span class="ph-tag" id="rTag">—</span></div>
+          <div id="rList"><div class="empty"><div class="empty-ico"><i class="fa-regular fa-rectangle-list"></i></div><span class="empty-title">awaiting query</span><p class="empty-desc">Select a part category and enter a phone model to search the database.</p></div></div>
+        </div>
+        <div class="pn fu d5"><div class="ph"><span class="ph-title">Quick select</span></div><div class="cats-wrap" id="catsWrap"></div></div>
+      </div>
+      <div class="tr">
+        <div class="pn fu d3"><div class="ph"><span class="ph-title">System health</span><span class="ph-tag" id="hTag">loading</span></div><div><div class="hrow"><span class="hk"><i class="fa-solid fa-circle-check"></i>status</span><span class="hv" id="hStat">—</span></div><div class="hrow"><span class="hk"><i class="fa-solid fa-memory"></i>memory</span><span class="hv" id="hMem">—</span></div><div class="hrow"><span class="hk"><i class="fa-solid fa-microchip"></i>heap</span><span class="hv" id="hHeap">—</span></div><div class="hrow"><span class="hk"><i class="fa-brands fa-node-js"></i>node</span><span class="hv" id="hNode">—</span></div><div class="hrow"><span class="hk"><i class="fa-solid fa-tag"></i>version</span><span class="hv amb" id="hVer">—</span></div><div class="hrow"><span class="hk"><i class="fa-solid fa-rotate"></i>last sync</span><span class="hv" id="hSync">—</span></div><div class="hrow"><span class="hk"><i class="fa-solid fa-magnifying-glass"></i>searches</span><span class="hv" id="hSrch">—</span></div></div></div>
+        <div class="pn fu d4"><div class="ph"><span class="ph-title">Trending today</span><span class="ph-tag" id="tTag">—</span></div><div id="tList"><div class="empty" style="padding:26px 16px"><span class="empty-title">no data yet</span><p class="empty-desc">Trending appears as technicians search.</p></div></div></div>
+        <div class="pn fu d5"><div class="ph"><span class="ph-title">Database</span><span class="ph-tag" id="dbTag">—</span></div><div class="ver-block"><span class="ver-num" id="verNum">—</span><span class="ver-sync" id="verSync"><i class="fa-solid fa-rotate"></i> last sync: —</span></div><div class="ph" style="border-top:1px solid var(--paper)"><span class="ph-title">Latest updates</span></div><div class="upd-list" id="updList"><div class="upd-item"><i class="fa-solid fa-circle-notch fa-spin"></i>Loading...</div></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="rule"></div>
+
+<section id="how" class="sec">
+  <div class="page">
+    <div class="sec-tag fu"><i class="fa-solid fa-map"></i> Simple process</div>
+    <h2 class="sec-h fu d1">Three steps.<br>Zero guesswork.</h2>
+    <p class="sec-sub fu d2">Finding the right universal part has never been simpler for Kerala's repair community.</p>
+    <div class="steps fu d3">
+      <div class="step"><span class="step-n">01</span><div class="step-title">Choose a category</div><p class="step-desc">Select the part type — battery, display combo, tempered glass, back cover, frame, or charging board.</p></div>
+      <div class="step"><span class="step-n">02</span><div class="step-title">Enter the model</div><p class="step-desc">Type the phone model name. Partial names work. The engine finds exact and close matches across 7000+ indexed phones.</p></div>
+      <div class="step"><span class="step-n">03</span><div class="step-title">Get results</div><p class="step-desc">Every compatible universal part listing appears instantly, scored by match quality. Copy any result with one tap.</p></div>
+    </div>
+  </div>
+</section>
+
+<div class="rule"></div>
+
+<section id="community" class="sec">
+  <div class="page">
+    <div class="comm-inner fu">
+      <div class="comm-l"><div class="sec-tag" style="margin-bottom:14px"><i class="fa-solid fa-users"></i> Community</div><h2 class="comm-title">Built by technicians.<br>For technicians.</h2><p class="comm-sub">UNIPARTS grows through community contribution. If a phone model is missing, submit it via WhatsApp and it gets added. Together we build the most complete parts database in Kerala.</p><div class="comm-btns"><button class="btn-amber" id="openModal"><i class="fa-solid fa-pen"></i> Suggest model</button><a class="btn-wire" href="https://wa.me/918590822912?text=Hi%20Munavvir%2C%20I%20want%20to%20contribute%20to%20UNIPARTS" target="_blank"><i class="fa-brands fa-whatsapp"></i> WhatsApp</a></div></div>
+      <div class="comm-r"><div class="benefit"><div class="benefit-ico"><i class="fa-solid fa-plus"></i></div><div><div class="benefit-title">Submit missing models</div><p class="benefit-desc">Found a phone not in the database? Message via WhatsApp and it gets added to the next sync.</p></div></div><div class="benefit"><div class="benefit-ico"><i class="fa-solid fa-people-group"></i></div><div><div class="benefit-title">Help fellow technicians</div><p class="benefit-desc">Every addition you make helps other repair shops across Kerala find the right part faster.</p></div></div><div class="benefit"><div class="benefit-ico"><i class="fa-solid fa-database"></i></div><div><div class="benefit-title">Database gets smarter</div><p class="benefit-desc">Community submissions are reviewed and indexed — making the tool better for everyone every day.</p></div></div></div>
+    </div>
+  </div>
+</section>
+
+<div class="rule"></div>
+
+<section id="about" class="sec">
+  <div class="page">
+    <div class="about-grid">
+      <div><div class="sec-tag fu"><i class="fa-solid fa-circle-user"></i> The maker</div><h2 class="sec-h fu d1">munax</h2><p class="about-para fu d2"><strong>Munavvir</strong> is a mobile technician based in Kerala who built UNIPARTS to solve a real daily problem — finding compatible universal parts without relying on memory or WhatsApp groups.</p><p class="about-para fu d3">Under the <strong>munax</strong> brand, this database was engineered entirely from a phone. No PC, no team — just code and a genuine need to build something useful for the repair community.</p><p class="about-para fu d4">From scraping to search engine to UI — every layer built with precision. <strong>This is the result.</strong></p><div class="contact-links fu d5"><a href="tel:+918590822912" class="c-link"><i class="fa-solid fa-phone"></i><div><div class="c-lbl">Phone / WhatsApp</div><div class="c-val">+91 85908 22912</div></div></a><a href="https://instagram.com/munavi.r_" target="_blank" class="c-link"><i class="fa-brands fa-instagram"></i><div><div class="c-lbl">Instagram</div><div class="c-val">@munavi.r_</div></div></a><a href="https://wa.me/918590822912" target="_blank" class="c-link"><i class="fa-brands fa-whatsapp"></i><div><div class="c-lbl">WhatsApp</div><div class="c-val">Message directly</div></div></a></div></div>
+      <div class="fu d2"><div class="about-card"><div class="about-card-top"><div class="avatar">M</div><div><div class="a-name">Munavvir</div><div class="a-role">Mobile technician · munax</div></div></div><div class="about-stats"><div class="ast"><span class="ast-val amber" id="abM">7000+</span><span class="ast-lbl">Models indexed</span></div><div class="ast"><span class="ast-val" id="abC">14</span><span class="ast-lbl">Categories</span></div><div class="ast"><span class="ast-val">2h</span><span class="ast-lbl">Refresh cycle</span></div><div class="ast"><span class="ast-val">100%</span><span class="ast-lbl">Free forever</span></div></div></div></div>
+    </div>
+  </div>
+</section>
+
+<div class="rule"></div>
+
+<footer class="site-footer">
+  <div class="page">
+    <div class="footer-top">
+      <div><div class="f-brand-name"><span class="gw">munax</span><span class="sw">·</span><span>UNIPARTS</span></div><p class="f-desc">Universal mobile parts compatibility database built for Kerala's mobile repair technicians. Free, fast, always updated.</p><div class="f-soc"><a href="https://wa.me/918590822912" target="_blank" class="fsoc"><i class="fa-brands fa-whatsapp"></i></a><a href="https://instagram.com/munavi.r_" target="_blank" class="fsoc"><i class="fa-brands fa-instagram"></i></a><a href="tel:+918590822912" class="fsoc"><i class="fa-solid fa-phone"></i></a></div></div>
+      <div><div class="f-col-title">Navigate</div><div class="f-links"><a href="#features"><i class="fa-solid fa-chevron-right"></i>Features</a><a href="#search"><i class="fa-solid fa-chevron-right"></i>Search tool</a><a href="#how"><i class="fa-solid fa-chevron-right"></i>How it works</a><a href="#community"><i class="fa-solid fa-chevron-right"></i>Community</a><a href="#about"><i class="fa-solid fa-chevron-right"></i>About</a></div></div>
+      <div><div class="f-col-title">Part types</div><div class="f-links"><a href="#search"><i class="fa-solid fa-battery-full"></i>Battery</a><a href="#search"><i class="fa-solid fa-display"></i>Display / Combo</a><a href="#search"><i class="fa-solid fa-mobile-screen"></i>Tempered Glass</a><a href="#search"><i class="fa-solid fa-shield"></i>Back Cover</a><a href="#search"><i class="fa-solid fa-grip-lines"></i>Middle Frame</a><a href="#search"><i class="fa-solid fa-plug"></i>Charging Board</a></div></div>
+      <div><div class="f-col-title">Contact</div><div class="f-links"><a href="tel:+918590822912"><i class="fa-solid fa-phone"></i>+91 85908 22912</a><a href="https://wa.me/918590822912" target="_blank"><i class="fa-brands fa-whatsapp"></i>WhatsApp</a><a href="https://instagram.com/munavi.r_" target="_blank"><i class="fa-brands fa-instagram"></i>@munavi.r_</a></div></div>
+    </div>
+    <div class="footer-bottom"><div class="f-copy">© 2025 <span>munax</span> · UNIPARTS · Munavvir, Kerala · All rights reserved</div><div class="f-badge"><i class="fa-solid fa-circle-dot"></i><span id="fStatus">connecting...</span></div></div>
+  </div>
+</footer>
+
+<div class="modal-bg" id="modalBg">
+  <div class="modal-card">
+    <button class="modal-x" id="mX"><i class="fa-solid fa-xmark"></i></button>
+    <div class="modal-title"><i class="fa-solid fa-plus-circle"></i>Suggest Model</div>
+    <div class="modal-sub">contribute to the database</div>
+    <input type="text" id="mNm" placeholder="Your name (optional)">
+    <input type="text" id="mMd" placeholder="Phone model *">
+    <select id="mCt"><option value="">Select category *</option><option value="battery">Battery</option><option value="display_combo_folder">Display / Combo</option><option value="tempered_glass_guard">Tempered Glass</option><option value="back_cover">Back Cover</option><option value="frame_middle_frame">Middle Frame</option><option value="power_volume_flex">Power / Volume Flex</option><option value="charging_sub_board">Charging Board</option><option value="touch_oca_glass">Touch / OCA</option></select>
+    <textarea id="mIf" placeholder="Additional info (optional)"></textarea>
+    <button class="btn-send" id="sendBtn"><i class="fa-brands fa-whatsapp"></i> Submit via WhatsApp</button>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ── utils ── */
+function safe(s){const d=document.createElement("div");d.textContent=(s==null)?"":String(s);return d.innerHTML;}
+function ago(iso){if(!iso)return"—";const s=Math.floor((Date.now()-new Date(iso))/1000);if(s<60)return s+"s ago";if(s<3600)return Math.floor(s/60)+"m ago";if(s<86400)return Math.floor(s/3600)+"h ago";return Math.floor(s/86400)+"d ago";}
+function scoreM(n){if(n>=100)return{c:"e",l:"exact"};if(n>=90)return{c:"s",l:"strong"};if(n>=75)return{c:"g",l:"good"};return{c:"",l:"partial"};}
+function toast(msg,type,ico){const el=document.createElement("div");el.className="toast "+type;el.innerHTML=`<i class="fa-solid ${ico}"></i>${msg}`;document.body.appendChild(el);setTimeout(()=>el.remove(),2400);}
+
+/* ── config ── */
+const API="", AK="munax_peak_2026";
+
+/* ── state ── */
+let mode="parts",cats=[],abort=null,specsAbort=null,spQ="",rec=[];
+try{rec=JSON.parse(localStorage.getItem("up-r")||"[]");}catch{}
+const $=id=>document.getElementById(id);
+
+/* ── clock ── */
+setInterval(()=>$("clock").textContent=new Date().toLocaleTimeString("en-GB",{hour12:false}),1000);
+$("clock").textContent=new Date().toLocaleTimeString("en-GB",{hour12:false});
+
+/* ── theme ── */
+const sv=localStorage.getItem("up-t");
+const sysL=window.matchMedia("(prefers-color-scheme: light)").matches;
+let isL=sv?sv==="l":sysL;
+function applyT(l){isL=l;document.body.classList.toggle("lt",l);$("thIco").className="fa-solid "+(l?"fa-moon":"fa-sun");$("thLbl").textContent=l?"Dark":"Light";}
+applyT(isL);
+$("themeBtn").addEventListener("click",()=>{const g=!isL;localStorage.setItem("up-t",g?"l":"d");applyT(g);});
+
+/* ── hamburger ── */
+$("hbg").addEventListener("click",()=>$("mm").classList.toggle("open"));
+window.mm=()=>$("mm").classList.remove("open");
+
+/* ── smooth scroll ── */
+document.querySelectorAll('a[href^="#"]').forEach(a=>{
+  a.addEventListener("click",e=>{
+    const t=document.querySelector(a.getAttribute("href"));
+    if(t){e.preventDefault();const y=t.getBoundingClientRect().top+window.scrollY-58;window.scrollTo({top:y,behavior:"smooth"});}
+  });
+});
+
+/* ── mode switch ── */
+document.querySelectorAll(".mode-btn").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    mode=btn.dataset.mode;
+    document.querySelectorAll(".mode-btn").forEach(b=>b.classList.toggle("on",b===btn));
+    $("pBd").style.display=mode==="parts"?"":"none";
+    $("spBd").style.display=mode==="specs"?"":"none";
+    $("rTitle").textContent=mode==="parts"?"Compatibility results":"Device specs";
+    showEmpty(mode==="parts"?"Select a category and enter a phone model.":"Enter a device name to fetch full specs.");
+    renderRec();
+    if(mode==="parts") $("clearBtn").style.display="inline-flex";
+    else $("clearBtn").style.display="none";
+  });
+});
+if(mode==="parts") $("clearBtn").style.display="inline-flex"; else $("clearBtn").style.display="none";
+
+$("clearBtn").addEventListener("click",()=>{
+  $("catSel").value="";
+  $("modIn").value="";
+  $("modIn").focus();
+  showEmpty("Select a category and enter a phone model.");
+  $("rTag").textContent="—";$("rTag").className="ph-tag";
+  $("sTag").textContent="ready";$("sTag").className="ph-tag";
+});
+
+/* ── recent ── */
+function saveRec(key){rec=[key,...rec.filter(r=>r!==key)].slice(0,6);try{localStorage.setItem("up-r",JSON.stringify(rec));}catch{}renderRec();}
+function renderRec(){
+  const strip=$("recStrip");
+  const f=rec.filter(r=>mode==="specs"?r.startsWith("specs::"):!r.startsWith("specs::"));
+  if(!f.length){strip.style.display="none";return;}
+  strip.style.display="";
+  $("recChips").innerHTML=f.map(item=>{const pts=item.split("::");return`<span class="r-chip" data-v="${safe(item)}"><i class="fa-solid fa-clock-rotate-left"></i>${safe(pts[1]||pts[0])}</span>`;}).join("");
+  $("recChips").querySelectorAll(".r-chip").forEach(c=>{
+    c.addEventListener("click",()=>{const pts=c.dataset.v.split("::");if(mode==="parts"&&pts.length>=2){$("catSel").value=pts[0];$("modIn").value=pts[1];doSearch();}else if(mode==="specs"){$("spIn").value=pts[1]||pts[0];doSpecs();}});
+  });
+}
+
+/* ── load cats ── */
+async function loadCats(){
+  try{
+    const r=await fetch(API+"/categories"),d=await r.json();
+    cats=d.categories||[];
+    const tot=cats.reduce((s,c)=>s+(c.modelCount||0),0);
+    $("heroM").textContent=tot.toLocaleString()+"+";
+    $("heroC").textContent=cats.length;
+    $("abM").textContent=tot.toLocaleString()+"+";
+    $("abC").textContent=cats.length;
+    $("navStatus").classList.remove("off");
+    $("navTxt").textContent=tot.toLocaleString()+" models";
+    $("fStatus").textContent="Live · "+tot.toLocaleString()+" models";
+    $("catSel").innerHTML='<option value="">Select category</option>';
+    cats.forEach(c=>{const o=document.createElement("option");o.value=c.key;o.textContent=c.name+" ("+c.modelCount+")";$("catSel").appendChild(o);});
+    renderCats();
+  }catch{
+    $("navStatus").classList.add("off");
+    $("navTxt").textContent="offline";
+    $("fStatus").textContent="API offline";
+  }
+}
+
+function renderCats(){
+  $("catsWrap").innerHTML="";
+  cats.filter(c=>c.modelCount>0).forEach(cat=>{
+    const el=document.createElement("button");
+    el.className="cat";
+    el.innerHTML="<span>"+safe(cat.name)+"</span><span class='cat-n'>"+cat.modelCount+"</span>";
+    el.addEventListener("click",()=>{$("catSel").value=cat.key;$("modIn").focus();document.getElementById("search").scrollIntoView({behavior:"smooth"});});
+    $("catsWrap").appendChild(el);
+  });
+}
+
+/* ── health ── */
+async function loadHealth(){
+  try{
+    const r=await fetch(API+"/health"),d=await r.json();
+    $("hStat").textContent=d.status||"—";$("hStat").className="hv ok";
+    $("hMem").textContent=d.memory?.rss||"—";
+    $("hHeap").textContent=d.memory?.heapUsed||"—";
+    $("hNode").textContent=d.node||"—";
+    $("hVer").textContent=d.data?.version||"—";
+    $("hSync").textContent=ago(d.data?.lastSync);
+    $("hSrch").textContent=d.metrics?.searches??"-";
+    $("hTag").textContent="live";$("hTag").className="ph-tag ok";
+  }catch{
+    $("hStat").textContent="offline";$("hStat").className="hv err";
+    $("hTag").textContent="offline";$("hTag").className="ph-tag";
+  }
+}
+
+/* ── trending ── */
+async function loadTrend(){
+  try{
+    const r=await fetch(API+"/admin/stats?key="+encodeURIComponent(AK));
+    if(!r.ok)return;
+    const d=await r.json(),top=d.topModels||[];
+    $("tTag").textContent=(d.total||0)+" today";
+    if(!top.length)return;
+    const mx=top[0]?.count||1;
+    $("tList").innerHTML=top.slice(0,8).map((it,i)=>`<div class="trow" onclick="window.__qs('${safe(it.name).replace(/'/g,"\\'")}')"><span class="t-rank">${i+1}</span><span class="t-name">${safe(it.name)}</span><div class="t-bar"><div class="t-bar-f" style="width:${Math.round(it.count/mx*100)}%"></div></div><span class="t-ct">${it.count}</span></div>`).join("");
+  }catch{}
+}
+window.__qs=n=>{$("modIn").value=n;$("modIn").focus();document.getElementById("search").scrollIntoView({behavior:"smooth"});};
+
+/* ── version + updates ── */
+async function loadVerUpd(){
+  try{
+    const[uR,vR]=await Promise.all([fetch(API+"/updates"),fetch(API+"/version")]);
+    const uD=await uR.json(),vD=await vR.json();
+    if(vD.success&&vD.version){
+      $("verNum").textContent=vD.version;
+      $("dbTag").textContent="v"+vD.version;$("dbTag").className="ph-tag on";
+      $("verSync").innerHTML='<i class="fa-solid fa-rotate"></i>'+ago(vD.lastSync);
     }
-
-    function showToast(msg, isError = false) {
-      const toast = document.createElement('div');
-      toast.innerHTML = `<i class="fas ${isError ? 'fa-exclamation-triangle' : 'fa-check-circle'}"></i> ${msg}`;
-      toast.style.cssText = `position:fixed; bottom:30px; left:50%; transform:translateX(-50%); background:${isError ? '#ff2d75' : '#00f3ff'}; color:#000; padding:14px 28px; border-radius:60px; font-size:0.9rem; font-weight:700; z-index:9999; backdrop-filter:blur(12px); box-shadow:0 0 20px rgba(0,243,255,0.5); display:flex; align-items:center; gap:10px;`;
-      document.body.appendChild(toast);
-      setTimeout(() => toast.remove(), 2800);
+    if(uD.success&&Array.isArray(uD.updates)&&uD.updates.length){
+      $("updList").innerHTML=uD.updates.map(u=>`<div class="upd-item"><i class="fa-solid fa-circle-dot"></i>${safe(u)}</div>`).join("");
+    }else{
+      $("updList").innerHTML='<div class="upd-item"><i class="fa-solid fa-check"></i>No recent updates</div>';
     }
+  }catch{$("updList").innerHTML='<div class="upd-item"><i class="fa-solid fa-triangle-exclamation"></i>Could not load updates</div>';}
+}
 
-    function updateClock() {
-      const now = new Date();
-      document.getElementById('liveClock').innerText = now.toLocaleTimeString('en-GB');
+/* ── skeleton + empty ── */
+function skel(n){return'<div class="sk-wrap">'+Array.from({length:n||3}).map(()=>'<div><div class="sk sk-a"></div><div class="sk sk-b"></div><div class="sk sk-c"></div></div>').join("")+"</div>";}
+function showEmpty(desc,ico){
+  $("rList").innerHTML=`<div class="empty"><div class="empty-ico"><i class="${ico||"fa-regular fa-rectangle-list"}"></i></div><span class="empty-title">awaiting query</span><p class="empty-desc">${safe(desc)}</p></div>`;
+  $("rTag").textContent="—";$("rTag").className="ph-tag";
+  $("sTag").textContent="ready";$("sTag").className="ph-tag";
+}
+
+/* ── parts search ── */
+async function doSearch(){
+  const part=$("catSel").value,model=$("modIn").value.trim();
+  if(!part){toast("Select a category","err","fa-triangle-exclamation");return;}
+  if(!model){toast("Enter a model name","err","fa-triangle-exclamation");return;}
+  saveRec(part+"::"+model);
+  if(abort)abort.abort();abort=new AbortController();
+  $("srchBtn").disabled=true;$("srchBtn").innerHTML='<i class="fa-solid fa-spinner fa-spin"></i>Scanning...';
+  $("rList").innerHTML=skel(3);
+  $("rTag").textContent="...";$("rTag").className="ph-tag";
+  $("sTag").textContent="scanning";
+  try{
+    const res=await fetch(API+"/search?part="+encodeURIComponent(part)+"&model="+encodeURIComponent(model),{signal:abort.signal});
+    const data=await res.json();
+    const n=data.totalMatches||0;
+    $("rTag").textContent=n+" match"+(n!==1?"es":"");$("rTag").className=n>0?"ph-tag on":"ph-tag";
+    $("sTag").textContent=n+" result"+(n!==1?"s":"");$("sTag").className=n>0?"ph-tag on":"ph-tag";
+    if(!data.results?.length){
+      $("rList").innerHTML=`<div class="empty"><div class="empty-ico"><i class="fa-solid fa-circle-xmark"></i></div><span class="empty-title">no matches found</span><p class="empty-desc">No compatible listings for "${safe(model)}". Try a shorter or alternate name.</p></div>`;
+      return;
     }
-    setInterval(updateClock, 1000);
-    updateClock();
-
-    async function loadCategories() {
-      try {
-        const res = await fetch(`${API_BASE}/categories`);
-        const data = await res.json();
-        categories = data.categories || [];
-        const totalModels = categories.reduce((s, c) => s + (c.modelCount || 0), 0);
-        document.getElementById('statModels').innerText = totalModels.toLocaleString();
-        document.getElementById('statCats').innerText = categories.length;
-        document.getElementById('statParts').innerText = categories.filter(c => c.modelCount > 0).length;
-        categorySelect.innerHTML = '<option value="">SELECT CATEGORY</option>' + 
-          categories.map(c => `<option value="${c.key}">${escapeHtml(c.name)} (${c.modelCount})</option>`).join('');
-      } catch(e) {
-        console.error(e);
-        categorySelect.innerHTML = '<option>ERROR LOADING CATEGORIES</option>';
-        showToast('Could not load categories', true);
-      }
-    }
-
-    async function loadUpdatesAndVersion() {
-      try {
-        const [updRes, verRes] = await Promise.all([
-          fetch(`${API_BASE}/updates`),
-          fetch(`${API_BASE}/version`)
-        ]);
-        const updatesData = await updRes.json();
-        const versionData = await verRes.json();
-        if (updatesData.success && updatesData.updates.length) {
-          updatesListDiv.innerHTML = updatesData.updates.map(u => `<div class="update-entry"><i class="fas fa-sync-alt"></i> ${escapeHtml(u)}</div>`).join('');
-        } else {
-          updatesListDiv.innerHTML = '<div class="update-entry">✨ NO RECENT UPDATES</div>';
-        }
-        if (versionData.success) {
-          const ver = versionData.version;
-          versionBadgeSpan.innerText = ver;
-          headerVersionSpan.innerText = ver;
-          if (versionData.lastSync) {
-            const syncDate = new Date(versionData.lastSync);
-            lastSyncSpan.innerHTML = `<i class="fas fa-clock"></i> Last sync: ${syncDate.toLocaleString()}`;
-          } else {
-            lastSyncSpan.innerHTML = '<i class="fas fa-sync-alt"></i> Last sync: just now';
-          }
-        } else {
-          versionBadgeSpan.innerText = '—';
-          headerVersionSpan.innerText = '—';
-        }
-      } catch(e) {
-        updatesListDiv.innerHTML = '<div class="update-entry">⚠️ UNABLE TO LOAD UPDATES</div>';
-        versionBadgeSpan.innerText = '?';
-      }
-    }
-
-    function saveRecent(cat, model) {
-      const key = `${cat}::${model}`;
-      recentList = [key, ...recentList.filter(r => r !== key)].slice(0, 6);
-      localStorage.setItem('uniparts_pro_recent', JSON.stringify(recentList));
-      renderRecents();
-    }
-
-    function renderRecents() {
-      if (!recentList.length) {
-        recentChips.innerHTML = '<span style="color:#555;">—</span>';
-        return;
-      }
-      recentChips.innerHTML = recentList.map(item => {
-        const [catKey, model] = item.split('::');
-        return `<span class="recent-chip" data-cat="${catKey}" data-model="${model}"><i class="fas fa-history"></i> ${escapeHtml(model)}</span>`;
-      }).join('');
-      document.querySelectorAll('.recent-chip').forEach(chip => {
-        chip.addEventListener('click', () => {
-          const cat = chip.dataset.cat;
-          const model = chip.dataset.model;
-          if (currentMode === 'parts') {
-            if (cat && categorySelect.querySelector(`option[value="${cat}"]`)) categorySelect.value = cat;
-            modelInput.value = model;
-            runPartsSearch();
-          } else {
-            specsInput.value = model;
-            runSpecsSearch();
-          }
-        });
-      });
-    }
-
-    async function runPartsSearch() {
-      const cat = categorySelect.value;
-      const model = modelInput.value.trim();
-      if (!cat) { showToast('SELECT A CATEGORY', true); return; }
-      if (!model) { showToast('ENTER A MODEL', true); return; }
-      saveRecent(cat, model);
-      setLoading(true);
-      try {
-        const res = await fetch(`${API_BASE}/search?part=${encodeURIComponent(cat)}&model=${encodeURIComponent(model)}`);
-        const data = await res.json();
-        if (data.error) throw new Error(data.error);
-        if (!data.results || data.results.length === 0) {
-          resultsDiv.innerHTML = `<div class="glass-card" style="padding:60px; text-align:center;"><i class="fas fa-frown"></i> NO COMPATIBILITY FOUND FOR "${escapeHtml(model)}"</div>`;
-        } else {
-          let html = `<div style="margin-bottom:25px; color:var(--text-secondary);"><i class="fas fa-chart-line"></i> ${data.totalMatches} RESULT(S) FOR "${escapeHtml(model)}"</div>`;
-          data.results.forEach(r => {
-            html += `
-              <div class="glass-card result-item">
-                <div class="result-brand"><i class="fas fa-trademark"></i> ${escapeHtml(r.brand)}</div>
-                <div class="result-compat">${escapeHtml(r.compatibility)}</div>
-                <div class="result-footer">
-                  <span><i class="fas fa-percent"></i> MATCH: ${r.score}%</span>
-                  <button class="copy-btn" data-text="${escapeHtml(r.compatibility).replace(/"/g, '&quot;')}"><i class="fas fa-copy"></i> COPY</button>
-                </div>
-              </div>`;
-          });
-          resultsDiv.innerHTML = html;
-          document.querySelectorAll('.copy-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-              navigator.clipboard.writeText(btn.dataset.text);
-              showToast('COPIED TO CLIPBOARD!');
-            });
-          });
-        }
-      } catch(e) {
-        resultsDiv.innerHTML = `<div class="glass-card" style="padding:60px; text-align:center;"><i class="fas fa-exclamation-triangle"></i> ERROR: ${e.message}</div>`;
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    async function runSpecsSearch() {
-      const query = specsInput.value.trim();
-      if (!query) { showToast('ENTER A DEVICE NAME', true); return; }
-      saveRecent('specs', query);
-      setLoading(true);
-      try {
-        const res = await fetch(`${API_BASE}/specs-search?q=${encodeURIComponent(query)}`);
-        const data = await res.json();
-        if (!data.success || !data.results || data.results.length === 0) {
-          resultsDiv.innerHTML = `<div class="glass-card" style="padding:60px; text-align:center;"><i class="fas fa-search"></i> NO DEVICES FOUND FOR "${escapeHtml(query)}"</div>`;
-          return;
-        }
-        let html = `<div class="device-grid">`;
-        data.results.forEach(d => {
-          html += `
-            <div class="glass-card device-tile" data-id="${escapeHtml(d.id)}" data-name="${escapeHtml(d.title)}">
-              <img src="${escapeHtml(d.img || '')}" class="device-img" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Crect fill=%22%23333%22 width=%22100%22 height=%22100%22/%3E%3Ctext fill=%22%23999%22 x=%2250%22 y=%2255%22 text-anchor=%22middle%22%3E📱%3C/text%3E%3C/svg%3E'">
-              <div class="device-name">${escapeHtml(d.title)}</div>
-            </div>`;
-        });
-        html += `</div>`;
-        resultsDiv.innerHTML = html;
-        document.querySelectorAll('.device-tile').forEach(card => {
-          card.addEventListener('click', () => loadSpecsDetail(card.dataset.id));
-        });
-      } catch(e) {
-        resultsDiv.innerHTML = `<div class="glass-card" style="padding:60px; text-align:center;"><i class="fas fa-times-circle"></i> SEARCH FAILED</div>`;
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    async function loadSpecsDetail(id) {
-      resultsDiv.innerHTML = `<div class="glass-card" style="padding:60px; text-align:center;"><div class="loader"></div> LOADING SPECIFICATIONS...</div>`;
-      try {
-        const res = await fetch(`${API_BASE}/specs-details?id=${encodeURIComponent(id)}`);
-        const data = await res.json();
-        if (!data.success) throw new Error();
-        let html = `<div class="glass-card" style="padding:32px;"><h3 style="margin-bottom:20px;"><i class="fas fa-mobile-alt"></i> ${escapeHtml(data.name)}</h3>`;
-        if (data.img) html += `<img src="${escapeHtml(data.img)}" style="max-width:160px; border-radius:28px; margin-bottom:24px;">`;
-        for (const [cat, specs] of Object.entries(data.specs)) {
-          html += `<details style="margin-top:18px;"><summary style="font-weight:700; cursor:pointer; color:var(--neon-cyan);"><i class="fas fa-list-ul"></i> ${escapeHtml(cat)}</summary>`;
-          for (const [k, v] of Object.entries(specs)) {
-            html += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.08); padding:12px 0;"><span style="color:var(--text-secondary);">${escapeHtml(k)}</span><span>${escapeHtml(v)}</span></div>`;
-          }
-          html += `</details>`;
-        }
-        html += `<button id="backToSpecs" style="margin-top:28px;"><i class="fas fa-arrow-left"></i> BACK TO RESULTS</button></div>`;
-        resultsDiv.innerHTML = html;
-        document.getElementById('backToSpecs')?.addEventListener('click', () => runSpecsSearch());
-      } catch(e) {
-        resultsDiv.innerHTML = `<div class="glass-card" style="padding:60px; text-align:center;"><i class="fas fa-exclamation-triangle"></i> COULD NOT LOAD SPECS</div>`;
-      }
-    }
-
-    function setLoading(loading) {
-      const btn = currentMode === 'parts' ? searchBtn : specsBtn;
-      btn.disabled = loading;
-      btn.innerHTML = loading ? '<i class="fas fa-spinner fa-pulse"></i> SCANNING...' : (currentMode === 'parts' ? '<i class="fas fa-brain"></i> START NEURAL SCAN' : '<i class="fas fa-search"></i> FETCH FROM GSMARENA');
-      if (loading) resultsDiv.innerHTML = `<div class="glass-card" style="padding:60px; text-align:center;"><div class="loader"></div> NEURAL SCAN IN PROGRESS...</div>`;
-    }
-
-    function setMode(mode) {
-      currentMode = mode;
-      partsUI.style.display = mode === 'parts' ? 'block' : 'none';
-      specsUI.style.display = mode === 'specs' ? 'block' : 'none';
-      document.querySelectorAll('.mode-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.mode === mode);
-      });
-      resultsDiv.innerHTML = `<div class="glass-card" style="padding:70px; text-align:center;">${mode === 'parts' ? '<i class="fas fa-tools"></i> SELECT CATEGORY & MODEL TO BEGIN COMPATIBILITY SCAN.' : '<i class="fas fa-database"></i> ENTER A DEVICE NAME TO FETCH FULL SPECIFICATIONS FROM GSMARENA.'}</div>`;
-    }
-
-    searchBtn.addEventListener('click', runPartsSearch);
-    specsBtn.addEventListener('click', runSpecsSearch);
-    modelInput.addEventListener('keypress', e => { if (e.key === 'Enter') runPartsSearch(); });
-    specsInput.addEventListener('keypress', e => { if (e.key === 'Enter') runSpecsSearch(); });
-    document.querySelectorAll('.mode-btn').forEach(btn => {
-      btn.addEventListener('click', () => setMode(btn.dataset.mode));
+    $("rList").innerHTML=data.results.map((r,i)=>{const sm=scoreM(r.score);return`<div class="rc ${r.score>=100?"exact":""}" style="animation-delay:${i*0.04}s"><div class="rc-head"><span class="rc-brand"><i class="fa-solid fa-tag"></i>${safe(r.brand||"generic")}<span class="rc-score">${safe(r.score)}</span></span><span class="rc-match ${sm.c}">${sm.l}</span></div><div class="compat">${safe(r.compatibility)}</div><div class="rc-foot"><span class="rc-pct"><i class="fa-solid fa-percent"></i>${safe(r.score)}% match</span><button class="copy-btn" data-t="${safe(r.compatibility).replace(/"/g,'&quot;')}"><i class="fa-regular fa-copy"></i>copy</button></div></div>`;}).join("");
+    $("rList").querySelectorAll(".copy-btn").forEach(btn=>{
+      btn.addEventListener("click",()=>{navigator.clipboard.writeText(btn.dataset.t).then(()=>{btn.innerHTML='<i class="fa-solid fa-check"></i>copied!';btn.classList.add("done");setTimeout(()=>{btn.innerHTML='<i class="fa-regular fa-copy"></i>copy';btn.classList.remove("done");},1900);toast("Copied to clipboard","ok","fa-check");});});
     });
+  }catch(e){if(e.name==="AbortError")return;$("rList").innerHTML=`<div class="empty"><div class="empty-ico"><i class="fa-solid fa-triangle-exclamation"></i></div><span class="empty-title">connection error</span><p class="empty-desc">Could not reach the API. Check your connection.</p></div>`;$("rTag").textContent="error";}
+  finally{$("srchBtn").disabled=false;$("srchBtn").innerHTML='<i class="fa-solid fa-bolt"></i>Search';abort=null;}
+}
+$("srchBtn").addEventListener("click",doSearch);
+$("modIn").addEventListener("keypress",e=>e.key==="Enter"&&doSearch());
 
-    loadCategories();
-    loadUpdatesAndVersion();
-    renderRecents();
-    setMode('parts');
-  </script>
+/* ── specs search (with abort) ── */
+async function doSpecs(){
+  const q=$("spIn").value.trim();
+  if(!q){toast("Enter a device name","err","fa-triangle-exclamation");return;}
+  spQ=q;saveRec("specs::"+q);
+  if(specsAbort)specsAbort.abort();specsAbort=new AbortController();
+  $("spBtn").disabled=true;$("spBtn").innerHTML='<i class="fa-solid fa-spinner fa-spin"></i>Searching...';
+  $("rList").innerHTML=skel(4);$("rTag").textContent="...";$("rTag").className="ph-tag";
+  try{
+    const res=await fetch(API+"/specs-search?q="+encodeURIComponent(q),{signal:specsAbort.signal});
+    const data=await res.json();
+    if(!data.success||!data.results?.length){$("rList").innerHTML=`<div class="empty"><div class="empty-ico"><i class="fa-solid fa-satellite-dish"></i></div><span class="empty-title">no devices found</span><p class="empty-desc">No results for "${safe(q)}". Try brand + model name.</p></div>`;$("rTag").textContent="0 devices";return;}
+    const n=data.results.length;$("rTag").textContent=n+" device"+(n!==1?"s":"");$("rTag").className="ph-tag on";
+    $("rList").innerHTML='<div class="dev-grid">'+data.results.map((dv,i)=>`<div class="dev" data-id="${safe(dv.id)}" style="animation-delay:${i*0.04}s"><img class="dev-img" src="${safe(dv.img||"")}" alt="${safe(dv.title)}" onerror="this.style.display='none'"><div class="dev-name">${safe(dv.title)}</div></div>`).join("")+"</div>";
+    $("rList").querySelectorAll(".dev").forEach(c=>c.addEventListener("click",()=>loadDetail(c.dataset.id)));
+  }catch(e){if(e.name==="AbortError")return;$("rList").innerHTML=`<div class="empty"><div class="empty-ico"><i class="fa-solid fa-triangle-exclamation"></i></div><span class="empty-title">search failed</span><p class="empty-desc">GSMArena may be unavailable.</p></div>`;}
+  finally{$("spBtn").disabled=false;$("spBtn").innerHTML='<i class="fa-solid fa-satellite-dish"></i>Search';specsAbort=null;}
+}
+$("spBtn").addEventListener("click",doSpecs);
+$("spIn").addEventListener("keypress",e=>e.key==="Enter"&&doSpecs());
+
+/* ── specs detail ── */
+async function loadDetail(id){
+  $("rList").innerHTML='<div class="spin-wrap"><div class="spinner"></div><span class="spin-lbl">Loading specs...</span></div>';
+  try{
+    const res=await fetch(API+"/specs-details?id="+encodeURIComponent(id));
+    const data=await res.json();
+    if(!data.success)throw new Error();
+    let html='<div class="specs-wrap"><div class="specs-name">'+safe(data.name)+"</div>";
+    if(data.img)html+='<img class="specs-img" src="'+safe(data.img)+'" alt="'+safe(data.name)+'">';
+    for(const[cat,rows]of Object.entries(data.specs||{})){html+='<details class="spec-sec"><summary><i class="fa-solid fa-chevron-right"></i>'+safe(cat)+"</summary>";for(const[k,v]of Object.entries(rows)){html+='<div class="spec-row"><span class="spec-k">'+safe(k)+'</span><span class="spec-v">'+safe(v)+"</span></div>";}html+="</details>";}
+    html+='<button class="btn-back" id="bkBtn"><i class="fa-solid fa-arrow-left"></i>Back to results</button></div>';
+    $("rList").innerHTML=html;
+    $("bkBtn").addEventListener("click",()=>{$("spIn").value=spQ;doSpecs();});
+  }catch{$("rList").innerHTML=`<div class="empty"><div class="empty-ico"><i class="fa-solid fa-triangle-exclamation"></i></div><span class="empty-title">could not load specs</span><p class="empty-desc">GSMArena may be unavailable.</p></div>`;}
+}
+
+/* ── modal ── */
+$("openModal").addEventListener("click",()=>$("modalBg").style.display="flex");
+$("mX").addEventListener("click",()=>$("modalBg").style.display="none");
+$("modalBg").addEventListener("click",e=>{if(e.target===$("modalBg"))$("modalBg").style.display="none";});
+$("sendBtn").addEventListener("click",()=>{
+  const name=$("mNm").value||"anonymous",model=$("mMd").value,cat=$("mCt").value,info=$("mIf").value;
+  if(!model||!cat){toast("Model and category required","err","fa-triangle-exclamation");return;}
+  window.open("https://wa.me/918590822912?text="+encodeURIComponent("New suggestion from "+name+":\nModel: "+model+"\nCategory: "+cat+"\nInfo: "+(info||"—")),"_blank");
+  $("modalBg").style.display="none";
+  [$("mNm"),$("mMd"),$("mIf")].forEach(el=>el.value="");$("mCt").value="";
+  toast("Suggestion sent! Thank you 🙏","ok","fa-check");
+});
+
+/* ── init ── */
+loadCats();loadHealth();loadTrend();loadVerUpd();renderRec();
+setInterval(loadHealth,30000);setInterval(loadTrend,120000);
+})();
+</script>
 </body>
 </html>
