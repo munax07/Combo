@@ -1,16 +1,26 @@
 {
-  "name": "uniparts-pro",
-  "version": "4.0.0",
-  "description": "UNIPARTS PRO – Ultimate Compatibility Database with Updates & Version",
+  "name": "uniparts-server",
+  "version": "2.0.0",
+  "description": "UNIPARTS PRO — Universal mobile parts compatibility API by munax",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
-  },
-  "dependencies": {
-    "axios": "^1.6.2",
-    "cheerio": "^1.0.0-rc.12"
+    "start": "node server.js",
+    "dev": "NODE_ENV=development node server.js"
   },
   "engines": {
-    "node": ">=16"
-  }
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "axios": "^1.6.8",
+    "cheerio": "^1.0.0"
+  },
+  "keywords": [
+    "uniparts",
+    "munax",
+    "mobile-parts",
+    "compatibility",
+    "kerala"
+  ],
+  "author": "Munavvir (munax)",
+  "license": "UNLICENSED"
 }
