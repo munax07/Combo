@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>UNIPARTS · Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=IBM+Plex+Mono:wght@300;400;500;600&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+:root {
+  --ink:      #060606;
+  --ink-2:    #0a0a0a;
+  --ink-3:    #0f0f0f;
+  --ink-4:    #141414;
+  --ink-5:    #1c1c1c;
+  --ink-6:    #242424;
+  --amber:    #df9718;
+  --amber-2:  #c4820e;
+  --amber-3:  #a06a08;
+  --amber-hi: #f5b830;
+  --amb-bg:   rgba(223,151,24,.07);
+  --amb-bg2:  rgba(223,151,24,.13);
+  --amb-ring: rgba(223,151,24,.24);
+  --paper:    rgba(255,255,255,.045);
+  --paper-2:  rgba(255,255,255,.08);
+  --chalk:    #eee8da;
+  --chalk-2:  #9a9080;
+  --chalk-3:  #564e42;
+  --chalk-4:  #2a2218;
+  --ok:       #4ade80;
+  --ok-bg:    rgba(74,222,128,.08);
+  --ok-ln:    rgba(74,222,128,.22);
+  --err:      #f87171;
+  --er-bg:    rgba(248,113,113,.08);
+  --er-ln:    rgba(248,113,113,.22);
+  --warn:     #fbbf24;
+  --warn-bg:  rgba(251,191,36,.08);
+  --warn-ln:  rgba(251,191,36,.22);
+  --blue:     #60a5fa;
+  --blue-bg:  rgba(96,165,250,.08);
+  --blue-ln:  rgba(96,165,250,.22);
+  --fd: 'Barlow Condensed', sans-serif;
+  --fm: 'IBM Plex Mono', monospace;
+  --fb: 'Barlow', sans-serif;
+  --rad: 2px;
+}
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior:smooth; }
+body {
+  font-family: var(--fb);
+  background: var(--ink);
+  color: var(--chalk);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Grain */
+body::before {
+  content:''; position:fixed; inset:0; z-index:9997; pointer-events:none;
+  opacity:.04;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.72' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size:180px;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width:3px; height:3px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--ink-6); border-radius:2px; }
+
+/* Animations */
+@keyframes spin      { to{transform:rotate(360deg);} }
+@keyframes pulse     { 0%,100%{opacity:1;} 50%{opacity:.3;} }
+@keyframes fade-up   { from{opacity:0;transform:translateY(12px);} to{opacity:1;transform:translateY(0);} }
+@keyframes fade-in   { from{opacity:0;} to{opacity:1;} }
+@keyframes shimmer   { 0%{background-position:200% 0;} 100%{background-position:-200% 0;} }
+@keyframes slide-in  { from{opacity:0;transform:translateX(-8px);} to{opacity:1;transform:translateX(0);} }
+@keyframes line-draw { from{transform:scaleX(0);} to{transform:scaleX(1);} }
+@keyframes toast-in  { from{opacity:0;transform:translate(-50%,10px) scale(.95);} to{opacity:1;transform:translate(-50%,0) scale(1);} }
+@keyframes count-in  { from{opacity:0;transform:translateY(6px);} to{opacity:1;transform:translateY(0);} }
+@keyframes bar-grow  { from{width:0;} to{width:var(--w);} }
+
+.fu { animation:fade-up .45s cubic-bezier(.22,1,.36,1) both; }
+.fi { animation:fade-in .4s ease both; }
+.d1{animation-delay:.05s;} .d2{animation-delay:.10s;} .d3{animation-delay:.15s;}
+.d4{animation-delay:.20s;} .d5{animation-delay:.25s;} .d6{animation-delay:.30s;}
+
+/* ── LAYOUT ── */
+.layout {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  grid-template-rows: 56px 1fr;
+  min-height: 100vh;
+}
+
+/* ── TOPBAR ── */
+.topbar {
+  grid-column: 1 / -1;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 24px;
+  background: rgba(6,6,6,.92);
+  border-bottom: 1px solid var(--paper);
+  backdrop-filter: blur(20px);
+  position: sticky; top: 0; z-index: 100;
+}
+.topbar::after {
+  content:'';
+  position:absolute; bottom:-1px; left:0; right:0; height:1.5px;
+  background:linear-gradient(90deg,transparent,var(--amber-3) 20%,var(--amber-hi) 50%,var(--amber-3) 80%,transparent);
+  transform-origin:left;
+  animation:line-draw 1.2s cubic-bezier(.22,1,.36,1) both;
+}
+.tb-logo {
+  display:flex; align-items:center; gap:0;
+  font-family:var(--fd); font-weight:900; font-size:17px; letter-spacing:2px;
+  text-decoration:none;
+}
+.tl-m { background:linear-gradient(135deg,var(--amber-hi),var(--amber)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+.tl-sep { color:var(--chalk-3); font-weight:300; margin:0 7px; }
+.tl-a { color:var(--err); }
+.tb-right { display:flex; align-items:center; gap:10px; }
+.tb-time { font-family:var(--fm); font-size:9px; letter-spacing:2px; color:var(--chalk-3); padding:4px 10px; border:1px solid var(--paper); border-radius:var(--rad); }
+.tb-key {
+  font-family:var(--fm); font-size:9px; letter-spacing:1px; padding:4px 10px;
+  border:1px solid var(--amb-ring); border-radius:var(--rad);
+  background:var(--amb-bg); color:var(--amber-hi);
+  display:flex; align-items:center; gap:5px;
+}
+.tb-key i { font-size:8px; }
+.tb-live {
+  display:flex; align-items:center; gap:5px;
+  font-family:var(--fm); font-size:9px; letter-spacing:1.5px;
+  padding:4px 11px; border-radius:var(--rad);
+  border:1px solid var(--ok-ln); background:var(--ok-bg); color:var(--ok);
+  transition:all .3s;
+}
+.tb-live.err  { border-color:var(--er-ln); background:var(--er-bg); color:var(--err); }
+.tb-live.load { border-color:var(--paper); background:transparent; color:var(--chalk-3); }
+.tl-dot { width:5px; height:5px; border-radius:50%; background:currentColor; animation:pulse 2s ease infinite; flex-shrink:0; }
+.tb-live.err .tl-dot, .tb-live.load .tl-dot { animation:none; }
+.btn-refresh-top {
+  display:flex; align-items:center; gap:6px;
+  font-family:var(--fm); font-size:9px; letter-spacing:1.5px; text-transform:uppercase;
+  padding:5px 13px; background:var(--amber-2); border:none; border-radius:var(--rad);
+  color:var(--ink); cursor:pointer; transition:all .18s;
+}
+.btn-refresh-top:hover { background:var(--amber-hi); }
+.btn-refresh-top:disabled { opacity:.4; cursor:not-allowed; }
+.tb-link {
+  font-family:var(--fm); font-size:9px; letter-spacing:1.5px; text-transform:uppercase;
+  padding:5px 12px; border:1px solid var(--paper); border-radius:var(--rad);
+  color:var(--chalk-3); text-decoration:none; transition:all .18s;
+  display:flex; align-items:center; gap:5px;
+}
+.tb-link:hover { color:var(--chalk); border-color:var(--paper-2); }
+
+/* ── SIDEBAR ── */
+.sidebar {
+  background:var(--ink-2);
+  border-right:1px solid var(--paper);
+  padding:16px 0;
+  position:sticky; top:56px;
+  height:calc(100vh - 56px);
+  overflow-y:auto;
+  display:flex; flex-direction:column; gap:2px;
+}
+.sb-section {
+  font-family:var(--fm); font-size:8px; letter-spacing:3px; text-transform:uppercase;
+  color:var(--chalk-4); padding:12px 18px 6px;
+}
+.sb-link {
+  display:flex; align-items:center; gap:10px;
+  padding:9px 18px;
+  font-family:var(--fb); font-size:12.5px; font-weight:500;
+  color:var(--chalk-3); cursor:pointer; text-decoration:none;
+  transition:all .15s; border:none; background:transparent; width:100%;
+  border-left:2px solid transparent;
+}
+.sb-link:hover { color:var(--chalk); background:var(--paper); }
+.sb-link.active { color:var(--amber-hi); background:var(--amb-bg); border-left-color:var(--amber-2); }
+.sb-link i { font-size:12px; width:14px; text-align:center; flex-shrink:0; }
+.sb-badge {
+  margin-left:auto; font-family:var(--fm); font-size:8px;
+  padding:2px 7px; border-radius:var(--rad);
+  background:var(--ink-4); border:1px solid var(--paper); color:var(--chalk-3);
+}
+.sb-divider { height:1px; background:var(--paper); margin:8px 16px; }
+
+/* ── MAIN CONTENT ── */
+.main { padding:24px; overflow-y:auto; }
+
+/* ── PANELS ── */
+.panel {
+  background:var(--ink-2); border:1px solid var(--paper);
+  border-radius:var(--rad); overflow:hidden; margin-bottom:14px;
+}
+.panel-head {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:10px 16px; border-bottom:1px solid var(--paper);
+  background:rgba(0,0,0,.2);
+}
+.ph-label {
+  font-family:var(--fm); font-size:9px; letter-spacing:3px; text-transform:uppercase;
+  color:var(--chalk-2); display:flex; align-items:center; gap:8px;
+}
+.ph-label::before { content:''; width:3px; height:3px; border-radius:50%; background:var(--amber); box-shadow:0 0 5px var(--amber-2); flex-shrink:0; }
+.ph-badge {
+  font-family:var(--fm); font-size:8px; letter-spacing:1px;
+  padding:3px 9px; border-radius:var(--rad);
+  background:var(--ink-4); border:1px solid var(--paper); color:var(--chalk-3);
+  transition:all .25s;
+}
+.ph-badge.ok     { background:var(--ok-bg); border-color:var(--ok-ln); color:var(--ok); }
+.ph-badge.err    { background:var(--er-bg); border-color:var(--er-ln); color:var(--err); }
+.ph-badge.active { background:var(--amb-bg); border-color:var(--amb-ring); color:var(--amber-hi); }
+.ph-badge.warn   { background:var(--warn-bg); border-color:var(--warn-ln); color:var(--warn); }
+
+/* ── SECTIONS (show/hide) ── */
+.section { display:none; }
+.section.active { display:block; animation:fade-in .3s ease; }
+
+/* ── STAT CARDS ── */
+.stat-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--paper); }
+.stat-card { padding:20px; background:var(--ink-2); }
+.stat-card:hover { background:var(--ink-3); }
+.sc-val {
+  font-family:var(--fd); font-weight:900; font-size:36px; line-height:1;
+  display:block; animation:count-in .5s ease both;
+}
+.sc-val.amber { background:linear-gradient(135deg,var(--amber-hi),var(--amber-2)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+.sc-val.ok  { color:var(--ok); }
+.sc-val.err { color:var(--err); }
+.sc-val.blue{ color:var(--blue); }
+.sc-lbl { font-family:var(--fm); font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--chalk-3); display:block; margin-top:5px; }
+.sc-sub { font-family:var(--fm); font-size:8.5px; color:var(--chalk-4); margin-top:3px; }
+
+/* ── TABLE ── */
+.data-table { width:100%; border-collapse:collapse; }
+.data-table th {
+  font-family:var(--fm); font-size:8.5px; letter-spacing:2px; text-transform:uppercase;
+  color:var(--chalk-3); padding:9px 16px; text-align:left;
+  border-bottom:1px solid var(--paper); background:rgba(0,0,0,.15);
+}
+.data-table td {
+  font-family:var(--fm); font-size:11px; color:var(--chalk-2);
+  padding:9px 16px; border-bottom:1px solid var(--paper);
+  vertical-align:middle;
+}
+.data-table tr:last-child td { border-bottom:none; }
+.data-table tr:hover td { background:rgba(255,255,255,.012); }
+.data-table .rank { color:var(--chalk-4); width:30px; }
+.data-table .model-name { color:var(--chalk); font-weight:500; font-family:var(--fb); font-size:12px; }
+.data-table .count-val { color:var(--amber-hi); font-weight:600; }
+.data-table .bar-cell { width:120px; }
+.bar-bg { height:3px; background:var(--ink-5); border-radius:2px; overflow:hidden; }
+.bar-fill { height:100%; background:linear-gradient(90deg,var(--amber-3),var(--amber-hi)); border-radius:2px; transition:width .6s cubic-bezier(.22,1,.36,1); }
+
+/* ── HEALTH ROWS ── */
+.h-grid { display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--paper); }
+.h-row { display:flex; justify-content:space-between; align-items:center; padding:9px 16px; border-bottom:1px solid var(--paper); background:var(--ink-2); }
+.h-row:last-child { border-bottom:none; }
+.hk { font-family:var(--fm); font-size:9px; color:var(--chalk-3); display:flex; align-items:center; gap:6px; }
+.hk i { font-size:8px; color:var(--amber-3); }
+.hv { font-family:var(--fm); font-size:10px; font-weight:500; color:var(--chalk-2); }
+.hv.ok   { color:var(--ok); }
+.hv.err  { color:var(--err); }
+.hv.amb  { color:var(--amber-hi); }
+.hv.blue { color:var(--blue); }
+
+/* ── LOG ROWS ── */
+.log-wrap { max-height:380px; overflow-y:auto; }
+.log-row {
+  display:grid; grid-template-columns:140px 100px 1fr 80px;
+  gap:12px; align-items:center;
+  padding:7px 16px; border-bottom:1px solid var(--paper);
+  font-family:var(--fm); font-size:10px; color:var(--chalk-2);
+  animation:slide-in .2s ease both;
+}
+.log-row:last-child { border-bottom:none; }
+.log-row:hover { background:rgba(255,255,255,.012); }
+.log-ts   { color:var(--chalk-4); font-size:9px; }
+.log-part { color:var(--amber-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.log-model{ color:var(--chalk); font-family:var(--fb); font-size:11px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.log-count{ text-align:right; }
+.log-count.hits  { color:var(--ok); }
+.log-count.miss  { color:var(--err); }
+
+/* ── CONTROL BUTTONS ── */
+.ctrl-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; padding:16px; }
+.ctrl-btn {
+  display:flex; flex-direction:column; align-items:flex-start; gap:6px;
+  padding:16px; border:1px solid var(--paper); border-radius:var(--rad);
+  background:var(--ink-3); cursor:pointer; transition:all .2s;
+  text-align:left;
+}
+.ctrl-btn:hover { background:var(--ink-4); border-color:var(--paper-2); }
+.ctrl-btn:hover .ctrl-btn-title { color:var(--chalk); }
+.ctrl-btn.danger:hover { border-color:var(--er-ln); background:var(--er-bg); }
+.ctrl-btn.danger:hover .ctrl-btn-title { color:var(--err); }
+.ctrl-btn.primary:hover { border-color:var(--amb-ring); background:var(--amb-bg); }
+.ctrl-btn.primary:hover .ctrl-btn-title { color:var(--amber-hi); }
+.ctrl-btn.success:hover { border-color:var(--ok-ln); background:var(--ok-bg); }
+.ctrl-btn.success:hover .ctrl-btn-title { color:var(--ok); }
+.ctrl-btn-icon { font-size:18px; color:var(--chalk-3); }
+.ctrl-btn:hover .ctrl-btn-icon { color:inherit; }
+.ctrl-btn.primary .ctrl-btn-icon { color:var(--amber-2); }
+.ctrl-btn.success .ctrl-btn-icon { color:var(--ok); }
+.ctrl-btn.danger  .ctrl-btn-icon { color:var(--err); }
+.ctrl-btn-title { font-family:var(--fd); font-weight:700; font-size:15px; letter-spacing:.5px; color:var(--chalk-2); transition:color .18s; }
+.ctrl-btn-desc  { font-family:var(--fb); font-size:11.5px; color:var(--chalk-3); line-height:1.5; }
+.ctrl-btn:disabled { opacity:.35; cursor:not-allowed; }
+
+/* ── STATUS LOG ── */
+.status-log { padding:12px 16px; max-height:160px; overflow-y:auto; display:flex; flex-direction:column; gap:5px; }
+.sl-item { font-family:var(--fm); font-size:10px; color:var(--chalk-2); display:flex; align-items:flex-start; gap:8px; animation:slide-in .2s ease both; }
+.sl-ts   { color:var(--chalk-4); flex-shrink:0; font-size:9px; margin-top:1px; }
+.sl-msg  { flex:1; }
+.sl-item.ok   .sl-msg { color:var(--ok); }
+.sl-item.err  .sl-msg { color:var(--err); }
+.sl-item.warn .sl-msg { color:var(--warn); }
+.sl-item.info .sl-msg { color:var(--chalk-2); }
+
+/* ── PROGRESS BAR ── */
+.progress-wrap { padding:16px; }
+.prog-label { font-family:var(--fm); font-size:9px; letter-spacing:1.5px; text-transform:uppercase; color:var(--chalk-3); margin-bottom:8px; display:flex; justify-content:space-between; }
+.prog-track { height:4px; background:var(--ink-5); border-radius:2px; overflow:hidden; }
+.prog-fill  { height:100%; background:linear-gradient(90deg,var(--amber-3),var(--amber-hi)); border-radius:2px; transition:width .6s cubic-bezier(.22,1,.36,1); }
+
+/* ── CATEGORY TABLE ── */
+.cat-row { display:grid; grid-template-columns:1fr 80px 120px; gap:10px; align-items:center; padding:8px 16px; border-bottom:1px solid var(--paper); }
+.cat-row:last-child { border-bottom:none; }
+.cat-row:hover { background:rgba(255,255,255,.012); }
+.cat-name { font-family:var(--fb); font-size:12px; font-weight:500; color:var(--chalk-2); }
+.cat-count { font-family:var(--fm); font-size:10px; color:var(--amber-hi); text-align:right; }
+.cat-bar-wrap { display:flex; align-items:center; gap:6px; }
+.cat-bar { flex:1; height:2px; background:var(--ink-5); border-radius:1px; overflow:hidden; }
+.cat-bar-fill { height:100%; background:linear-gradient(90deg,var(--amber-3),var(--amber-hi)); border-radius:1px; }
+.cat-pct { font-family:var(--fm); font-size:8px; color:var(--chalk-3); width:28px; text-align:right; }
+
+/* ── SKELETON ── */
+.skel { background:linear-gradient(90deg,var(--ink-3) 0%,var(--ink-4) 50%,var(--ink-3) 100%); background-size:200% 100%; animation:shimmer 1.5s ease infinite; border-radius:var(--rad); }
+
+/* ── EMPTY ── */
+.empty { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:36px 20px; gap:8px; text-align:center; }
+.empty i { font-size:20px; color:var(--chalk-4); margin-bottom:4px; }
+.empty-t { font-family:var(--fm); font-size:9px; letter-spacing:2.5px; text-transform:uppercase; color:var(--chalk-3); }
+.empty-d { font-family:var(--fb); font-size:12px; color:var(--chalk-4); max-width:220px; line-height:1.5; }
+
+/* ── SPINNER ── */
+.spinner { width:20px; height:20px; border:2px solid var(--paper); border-top-color:var(--amber); border-radius:50%; animation:spin .65s linear infinite; }
+.spin-row { display:flex; align-items:center; gap:10px; padding:20px 16px; font-family:var(--fm); font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--chalk-3); }
+
+/* ── TOAST ── */
+.toast { position:fixed; bottom:20px; left:50%; padding:9px 18px; border-radius:var(--rad); font-family:var(--fm); font-size:10px; font-weight:500; z-index:99999; pointer-events:none; animation:toast-in .2s ease; box-shadow:0 8px 24px rgba(0,0,0,.7); white-space:nowrap; display:flex; align-items:center; gap:7px; }
+.toast i { font-size:9px; }
+.toast.ok   { background:var(--ok); color:var(--ink); }
+.toast.err  { background:var(--err); color:#fff; }
+.toast.warn { background:var(--warn); color:var(--ink); }
+.toast.info { background:var(--ink-5); border:1px solid var(--paper-2); color:var(--chalk); }
+
+/* ── CONFIRM MODAL ── */
+.modal-bg { display:none; position:fixed; inset:0; background:rgba(0,0,0,.8); backdrop-filter:blur(12px); align-items:center; justify-content:center; z-index:9000; padding:16px; }
+.modal-bg.open { display:flex; }
+.modal-card { background:var(--ink-2); border:1px solid var(--er-ln); border-top:2px solid var(--err); border-radius:var(--rad); padding:24px; width:100%; max-width:360px; box-shadow:0 32px 64px rgba(0,0,0,.8); animation:fade-up .25s cubic-bezier(.22,1,.36,1); }
+.modal-title { font-family:var(--fd); font-weight:900; font-size:20px; color:var(--err); margin-bottom:6px; display:flex; align-items:center; gap:8px; }
+.modal-title i { font-size:14px; }
+.modal-desc { font-family:var(--fb); font-size:13px; color:var(--chalk-2); line-height:1.65; margin-bottom:18px; }
+.modal-btns { display:flex; gap:8px; }
+.btn-confirm { flex:1; padding:10px; border:none; border-radius:var(--rad); background:var(--err); font-family:var(--fd); font-weight:700; font-size:13px; letter-spacing:1.5px; text-transform:uppercase; color:#fff; cursor:pointer; transition:opacity .18s; }
+.btn-confirm:hover { opacity:.85; }
+.btn-cancel  { flex:1; padding:10px; border:1px solid var(--paper); border-radius:var(--rad); background:transparent; font-family:var(--fd); font-weight:700; font-size:13px; letter-spacing:1.5px; text-transform:uppercase; color:var(--chalk-3); cursor:pointer; transition:all .18s; }
+.btn-cancel:hover { color:var(--chalk); border-color:var(--paper-2); }
+
+/* ── RESPONSIVE ── */
+@media(max-width:960px) {
+  .layout { grid-template-columns:1fr; grid-template-rows:56px auto 1fr; }
+  .sidebar { position:static; height:auto; flex-direction:row; flex-wrap:wrap; padding:8px; border-right:none; border-bottom:1px solid var(--paper); overflow-x:auto; }
+  .sb-section { display:none; }
+  .sb-divider { display:none; }
+  .sb-link { width:auto; flex-shrink:0; border-left:none; border-bottom:2px solid transparent; padding:8px 14px; font-size:11px; }
+  .sb-link.active { border-bottom-color:var(--amber-2); border-left:none; }
+  .stat-grid { grid-template-columns:1fr 1fr; }
+  .ctrl-grid { grid-template-columns:1fr 1fr; }
+  .h-grid { grid-template-columns:1fr; }
+  .log-row { grid-template-columns:100px 80px 1fr; }
+  .log-count { display:none; }
+}
+@media(max-width:600px) {
+  .stat-grid { grid-template-columns:1fr 1fr; }
+  .ctrl-grid { grid-template-columns:1fr; }
+  .topbar { padding:0 14px; gap:8px; }
+  .tb-key { display:none; }
+  .tb-time { display:none; }
+}
+</style>
+</head>
+<body>
+
+<!-- CONFIRM MODAL -->
+<div class="modal-bg" id="confirmModal">
+  <div class="modal-card">
+    <div class="modal-title"><i class="fa-solid fa-triangle-exclamation"></i> <span id="confirmTitle">Confirm</span></div>
+    <p class="modal-desc" id="confirmDesc">Are you sure?</p>
+    <div class="modal-btns">
+      <button class="btn-cancel" id="confirmCancel">Cancel</button>
+      <button class="btn-confirm" id="confirmOk">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<div class="layout">
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <a href="/" class="tb-logo">
+      <span class="tl-m">munax</span>
+      <span class="tl-sep">·</span>
+      <span>UNIPARTS</span>
+      <span class="tl-sep">·</span>
+      <span class="tl-a">ADMIN</span>
+    </a>
+    <div class="tb-right">
+      <div class="tb-live load" id="tbLive"><span class="tl-dot"></span><span id="tbLiveTxt">connecting</span></div>
+      <div class="tb-time" id="tbTime">--:--:--</div>
+      <div class="tb-key"><i class="fa-solid fa-key"></i> authenticated</div>
+      <button class="btn-refresh-top" id="btnSyncTop"><i class="fa-solid fa-rotate"></i> Sync now</button>
+      <a href="/" class="tb-link"><i class="fa-solid fa-arrow-left"></i> Back to site</a>
+    </div>
+  </header>
+
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="sb-section">Overview</div>
+    <button class="sb-link active" data-sec="overview"><i class="fa-solid fa-gauge-high"></i> Dashboard<span class="sb-badge" id="sbSearchBadge">—</span></button>
+    <button class="sb-link" data-sec="searches"><i class="fa-solid fa-magnifying-glass"></i> Search logs</button>
+    <button class="sb-link" data-sec="trending"><i class="fa-solid fa-fire"></i> Trending</button>
+    <div class="sb-divider"></div>
+    <div class="sb-section">System</div>
+    <button class="sb-link" data-sec="health"><i class="fa-solid fa-heart-pulse"></i> Health</button>
+    <button class="sb-link" data-sec="database"><i class="fa-solid fa-database"></i> Database</button>
+    <div class="sb-divider"></div>
+    <div class="sb-section">Controls</div>
+    <button class="sb-link" data-sec="controls"><i class="fa-solid fa-sliders"></i> Controls</button>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- ══════════ OVERVIEW ══════════ -->
+    <div class="section active" id="sec-overview">
+
+      <!-- Stat cards -->
+      <div class="panel fu">
+        <div class="stat-grid" id="overviewStats">
+          <div class="stat-card"><span class="sc-val amber skel" style="height:36px;width:80px" id="ovSearches">—</span><span class="sc-lbl">Searches today</span><span class="sc-sub" id="ovSearchesSub">loading...</span></div>
+          <div class="stat-card"><span class="sc-val ok" id="ovModels">—</span><span class="sc-lbl">Models indexed</span><span class="sc-sub" id="ovModelsSub">—</span></div>
+          <div class="stat-card"><span class="sc-val blue" id="ovRequests">—</span><span class="sc-lbl">Total requests</span><span class="sc-sub" id="ovRequestsSub">—</span></div>
+          <div class="stat-card"><span class="sc-val" id="ovUptime">—</span><span class="sc-lbl">Server uptime</span><span class="sc-sub" id="ovUptimeSub">—</span></div>
+        </div>
+      </div>
+
+      <!-- Top models quick view -->
+      <div class="panel fu d2">
+        <div class="panel-head">
+          <span class="ph-label">Top searched models — today</span>
+          <span class="ph-badge active" id="ovTopTag">—</span>
+        </div>
+        <div id="ovTopList">
+          <div class="spin-row"><div class="spinner"></div>Loading...</div>
+        </div>
+      </div>
+
+      <!-- Recent activity -->
+      <div class="panel fu d3">
+        <div class="panel-head">
+          <span class="ph-label">Recent searches</span>
+          <span class="ph-badge" id="ovRecentTag">last 20</span>
+        </div>
+        <div class="log-wrap" id="ovRecentList">
+          <div class="spin-row"><div class="spinner"></div>Loading...</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ══════════ SEARCHES ══════════ -->
+    <div class="section" id="sec-searches">
+      <div class="panel fu">
+        <div class="panel-head">
+          <span class="ph-label">Search log — today</span>
+          <span class="ph-badge active" id="srchTotal">—</span>
+        </div>
+        <div style="padding:10px 16px;border-bottom:1px solid var(--paper);display:flex;gap:8px;align-items:center;">
+          <input type="text" id="srchFilter" placeholder="Filter by model or part..." style="flex:1;padding:7px 11px;background:var(--ink-3);border:1px solid var(--paper);border-radius:var(--rad);font-family:var(--fb);font-size:12px;color:var(--chalk);outline:none;">
+          <button onclick="renderSearchLogs()" style="padding:7px 14px;background:var(--amber-2);border:none;border-radius:var(--rad);font-family:var(--fm);font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--ink);cursor:pointer;">Filter</button>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="data-table" id="srchTable">
+            <thead><tr><th>#</th><th>Time</th><th>Model</th><th>Part</th><th>Results</th></tr></thead>
+            <tbody id="srchBody"><tr><td colspan="5" style="padding:24px;text-align:center;font-family:var(--fm);font-size:9px;letter-spacing:2px;color:var(--chalk-3);text-transform:uppercase;">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ TRENDING ══════════ -->
+    <div class="section" id="sec-trending">
+      <div class="panel fu">
+        <div class="panel-head">
+          <span class="ph-label">Top 10 models — today</span>
+          <span class="ph-badge active" id="trendTotal">—</span>
+        </div>
+        <div id="trendModelList">
+          <div class="spin-row"><div class="spinner"></div>Loading...</div>
+        </div>
+      </div>
+      <div class="panel fu d2">
+        <div class="panel-head">
+          <span class="ph-label">Top 10 part categories — today</span>
+        </div>
+        <div id="trendPartList">
+          <div class="spin-row"><div class="spinner"></div>Loading...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ HEALTH ══════════ -->
+    <div class="section" id="sec-health">
+      <div class="panel fu">
+        <div class="panel-head">
+          <span class="ph-label">Server health</span>
+          <span class="ph-badge ok" id="healthStatus">live</span>
+        </div>
+        <div class="h-grid">
+          <div class="h-row"><span class="hk"><i class="fa-solid fa-circle-check"></i> status</span><span class="hv ok" id="hStatus">—</span></div>
+          <div class="h-row"><span class="hk"><i class="fa-solid fa-clock"></i> uptime</span><span class="hv" id="hUptime">—</span></div>
+          <div class="h-row"><span class="hk"><i class="fa-solid fa-memory"></i> memory RSS</span><span class="hv" id="hRss">—</span></div>
+          <div class="h-row"><span class="hk"><i class="fa-solid fa-microchip"></i> heap used</span><span class="hv" id="hHeap">—</span></div>
+          <div class="h-row"><span class="hk"><i class="fa-solid fa-server"></i> heap total</span><span class="hv" id="hHeapTotal">—</span></div>
+          <div class="h-row"><span class="hk"><i class="fa-brands fa-node-js"></i> node version</span><span class="hv blue" id="hNode">—</span></div>
+          <div class="h-row"><span class="hk"><i class="fa-solid fa-globe"></i> environment</span><span class="hv" id="hEnv">—</span></div>
+          <div class="h-row"><span class="hk"><i class="fa-solid fa-calendar"></i> started at</span><span class="hv" id="hStarted">—</span></div>
+          <div class="h-row"><span class="hk"><i class="fa-solid fa-rotate"></i> syncing now</span><span class="hv" id="hSyncing">—</span></div>
+          <div class="h-row"><span class="hk"><i class="fa-solid fa-magnifying-glass"></i> total searches</span><span class="hv amb" id="hSearches">—</span></div>
+          <div class="h-row"><span class="hk"><i class="fa-solid fa-arrow-right-to-bracket"></i> total requests</span><span class="hv blue" id="hRequests">—</span></div>
+          <div class="h-row"><span class="hk"><i class="fa-solid fa-triangle-exclamation"></i> total errors</span><span class="hv err" id="hErrors">—</span></div>
+        </div>
+      </div>
+
+      <!-- Memory usage visual -->
+      <div class="panel fu d2">
+        <div class="panel-head"><span class="ph-label">Memory breakdown</span></div>
+        <div class="progress-wrap">
+          <div class="prog-label"><span>Heap Used</span><span id="heapPct">—</span></div>
+          <div class="prog-track"><div class="prog-fill" id="heapBar" style="width:0%"></div></div>
+        </div>
+        <div style="height:1px;background:var(--paper);"></div>
+        <div class="progress-wrap">
+          <div class="prog-label"><span>RSS</span><span id="rssPct">—</span></div>
+          <div class="prog-track"><div class="prog-fill" id="rssBar" style="width:0%;background:linear-gradient(90deg,#1d4ed8,#60a5fa)"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ DATABASE ══════════ -->
+    <div class="section" id="sec-database">
+
+      <!-- DB stats -->
+      <div class="panel fu">
+        <div class="panel-head">
+          <span class="ph-label">Database overview</span>
+          <span class="ph-badge active" id="dbVer">—</span>
+        </div>
+        <div class="h-grid">
+          <div class="h-row"><span class="hk"><i class="fa-solid fa-tag"></i> version</span><span class="hv amb" id="dbVerVal">—</span></div>
+          <div class="h-row"><span class="hk"><i class="fa-solid fa-rotate"></i> last sync</span><span class="hv" id="dbLastSync">—</span></div>
+          <div class="h-row"><span class="hk"><i class="fa-solid fa-layer-group"></i> categories</span><span class="hv ok" id="dbCats">—</span></div>
+          <div class="h-row"><span class="hk"><i class="fa-solid fa-mobile-screen"></i> total models</span><span class="hv ok" id="dbModels">—</span></div>
+          <div class="h-row"><span class="hk"><i class="fa-solid fa-arrows-rotate"></i> sync count</span><span class="hv blue" id="dbSyncCount">—</span></div>
+          <div class="h-row"><span class="hk"><i class="fa-solid fa-calendar-check"></i> started</span><span class="hv" id="dbStarted">—</span></div>
+        </div>
+      </div>
+
+      <!-- Categories breakdown -->
+      <div class="panel fu d2">
+        <div class="panel-head">
+          <span class="ph-label">Categories breakdown</span>
+          <span class="ph-badge" id="dbCatTag">loading</span>
+        </div>
+        <div id="dbCatList">
+          <div class="spin-row"><div class="spinner"></div>Loading categories...</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ══════════ CONTROLS ══════════ -->
+    <div class="section" id="sec-controls">
+
+      <div class="panel fu">
+        <div class="panel-head"><span class="ph-label">Server controls</span><span class="ph-badge warn">use with care</span></div>
+        <div class="ctrl-grid">
+          <button class="ctrl-btn primary" id="ctrlSync">
+            <i class="fa-solid fa-rotate ctrl-btn-icon"></i>
+            <span class="ctrl-btn-title">Force sync</span>
+            <span class="ctrl-btn-desc">Fetch latest data from combosupport.in and rebuild the search index immediately.</span>
+          </button>
+          <button class="ctrl-btn success" id="ctrlBackup">
+            <i class="fa-solid fa-download ctrl-btn-icon"></i>
+            <span class="ctrl-btn-title">Download backup</span>
+            <span class="ctrl-btn-desc">Download the current master data JSON backup file from the server.</span>
+          </button>
+          <button class="ctrl-btn" id="ctrlRefreshStats">
+            <i class="fa-solid fa-chart-bar ctrl-btn-icon"></i>
+            <span class="ctrl-btn-title">Refresh stats</span>
+            <span class="ctrl-btn-desc">Reload all stats, health, and trending data from the server.</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Activity log -->
+      <div class="panel fu d2">
+        <div class="panel-head">
+          <span class="ph-label">Activity log</span>
+          <button onclick="clearLog()" style="font-family:var(--fm);font-size:8px;letter-spacing:1px;padding:3px 8px;background:var(--ink-4);border:1px solid var(--paper);border-radius:var(--rad);color:var(--chalk-3);cursor:pointer;">Clear</button>
+        </div>
+        <div class="status-log" id="activityLog">
+          <div class="sl-item info"><span class="sl-ts" id="logInitTs">--:--:--</span><span class="sl-msg">Admin panel initialised</span></div>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ── CONFIG ── */
+// Key is read from URL params — no hardcoding
+const params = new URLSearchParams(window.location.search);
+const KEY    = params.get("key") || "";
+const API    = window.location.origin; // same origin as server
+
+/* ── UTILS ── */
+const $=id=>document.getElementById(id);
+function esc(s){const d=document.createElement("div");d.textContent=(s==null)?"":String(s);return d.innerHTML;}
+function ts(){return new Date().toLocaleTimeString("en-GB",{hour12:false});}
+function ago(iso){
+  if(!iso)return"—";
+  const s=Math.floor((Date.now()-new Date(iso))/1000);
+  if(s<60)return s+"s ago";
+  if(s<3600)return Math.floor(s/60)+"m ago";
+  if(s<86400)return Math.floor(s/3600)+"h ago";
+  return Math.floor(s/86400)+"d ago";
+}
+function fmtDate(iso){if(!iso)return"—";return new Date(iso).toLocaleString("en-GB",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"});}
+function toast(msg,type,ico){
+  const el=document.createElement("div");
+  el.className="toast "+type;
+  el.innerHTML=`<i class="fa-solid ${ico}"></i>${msg}`;
+  document.body.appendChild(el);
+  setTimeout(()=>{el.style.opacity="0";el.style.transition="opacity .2s";setTimeout(()=>el.remove(),220);},2400);
+}
+
+/* ── CLOCK ── */
+function tick(){if($("tbTime"))$("tbTime").textContent=ts();}
+tick();setInterval(tick,1000);
+if($("logInitTs"))$("logInitTs").textContent=ts();
+
+/* ── ACTIVITY LOG ── */
+function addLog(msg,type="info"){
+  const wrap=$("activityLog");if(!wrap)return;
+  const el=document.createElement("div");
+  el.className="sl-item "+type;
+  el.innerHTML=`<span class="sl-ts">${ts()}</span><span class="sl-msg">${esc(msg)}</span>`;
+  wrap.insertBefore(el,wrap.firstChild);
+  // Keep max 60 entries
+  while(wrap.children.length>60)wrap.removeChild(wrap.lastChild);
+}
+window.clearLog=()=>{if($("activityLog"))$("activityLog").innerHTML='';};
+
+/* ── SIDEBAR NAV ── */
+document.querySelectorAll(".sb-link[data-sec]").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    document.querySelectorAll(".sb-link").forEach(b=>b.classList.remove("active"));
+    document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
+    btn.classList.add("active");
+    const sec=$("sec-"+btn.dataset.sec);
+    if(sec)sec.classList.add("active");
+    // Load section data if needed
+    if(btn.dataset.sec==="searches")renderSearchLogs();
+    if(btn.dataset.sec==="trending")renderTrending();
+    if(btn.dataset.sec==="health")renderHealth();
+    if(btn.dataset.sec==="database")renderDatabase();
+  });
+});
+
+/* ── CONFIRM MODAL ── */
+let confirmCallback=null;
+function confirm(title,desc,cb){
+  $("confirmTitle").textContent=title;
+  $("confirmDesc").textContent=desc;
+  confirmCallback=cb;
+  $("confirmModal").classList.add("open");
+}
+$("confirmCancel").addEventListener("click",()=>{$("confirmModal").classList.remove("open");confirmCallback=null;});
+$("confirmOk").addEventListener("click",()=>{$("confirmModal").classList.remove("open");if(confirmCallback)confirmCallback();confirmCallback=null;});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")$("confirmModal").classList.remove("open");});
+
+/* ── FETCH HELPERS ── */
+async function fetchHealth(){
+  const r=await fetch(API+"/health");
+  if(!r.ok)throw new Error("health "+r.status);
+  return r.json();
+}
+async function fetchStats(){
+  const r=await fetch(API+"/admin/stats?key="+encodeURIComponent(KEY));
+  if(!r.ok)throw new Error("stats "+r.status);
+  return r.json();
+}
+async function fetchCategories(){
+  const r=await fetch(API+"/categories");
+  if(!r.ok)throw new Error("cats "+r.status);
+  return r.json();
+}
+
+/* ── STATUS BAR ── */
+function setStatus(ok,txt){
+  const el=$("tbLive");
+  el.className="tb-live "+(ok?"":"err");
+  $("tbLiveTxt").textContent=txt;
+}
+
+/* ── OVERVIEW ── */
+async function loadOverview(){
+  try{
+    const[h,s]=await Promise.all([fetchHealth(),fetchStats()]);
+
+    // Stat cards
+    const totalModels=h.data?.models||0;
+    const syncCount=h.data?.syncCount||0;
+    $("ovSearches").textContent=s.total||0;
+    $("ovSearches").className="sc-val amber";
+    $("ovSearchesSub").textContent="total logged today";
+    $("ovModels").textContent=(totalModels).toLocaleString();
+    $("ovModelsSub").textContent=(h.data?.categories||0)+" categories";
+    $("ovRequests").textContent=(h.metrics?.requests||0).toLocaleString();
+    $("ovRequestsSub").textContent=(h.metrics?.errors||0)+" errors";
+    $("ovUptime").textContent=h.uptime||"—";
+    $("ovUptimeSub").textContent="sync count: "+syncCount;
+
+    // Status
+    setStatus(true,(totalModels).toLocaleString()+" models live");
+
+    // Badge
+    if($("sbSearchBadge"))$("sbSearchBadge").textContent=s.total||0;
+
+    // Top models
+    const top=(s.topModels||[]).slice(0,8);
+    $("ovTopTag").textContent=(s.total||0)+" today";
+    if(!top.length){
+      $("ovTopList").innerHTML='<div class="empty"><i class="fa-solid fa-chart-bar"></i><span class="empty-t">no data yet</span><span class="empty-d">Trending appears as searches happen.</span></div>';
+    }else{
+      const mx=top[0]?.count||1;
+      $("ovTopList").innerHTML='<table class="data-table"><thead><tr><th>#</th><th>Model</th><th>Searches</th><th class="bar-cell">Relative</th></tr></thead><tbody>'+
+      top.map((it,i)=>`<tr><td class="rank">${i+1}</td><td class="model-name">${esc(it.name)}</td><td class="count-val">${it.count}</td><td class="bar-cell"><div class="bar-bg"><div class="bar-fill" style="width:${Math.round(it.count/mx*100)}%"></div></div></td></tr>`).join("")+
+      '</tbody></table>';
+    }
+
+    // Recent
+    const recent=(s.recent||[]).slice(0,20);
+    $("ovRecentTag").textContent="last "+recent.length;
+    if(!recent.length){
+      $("ovRecentList").innerHTML='<div class="empty"><i class="fa-solid fa-clock-rotate-left"></i><span class="empty-t">no recent searches</span></div>';
+    }else{
+      $("ovRecentList").innerHTML=recent.map(l=>`
+        <div class="log-row">
+          <span class="log-ts">${esc(l.ts?l.ts.slice(11,19):"—")}</span>
+          <span class="log-part">${esc(l.part||"—")}</span>
+          <span class="log-model">${esc(l.model||"—")}</span>
+          <span class="log-count ${(l.resultCount||0)>0?"hits":"miss"}">${l.resultCount||0} hits</span>
+        </div>`).join("");
+    }
+
+    addLog("Overview loaded — "+s.total+" searches today","ok");
+  }catch(e){
+    setStatus(false,"offline");
+    addLog("Overview load failed: "+e.message,"err");
+    toast("Could not load stats","err","fa-triangle-exclamation");
+  }
+}
+
+/* ── SEARCH LOGS ── */
+let allLogs=[];
+async function renderSearchLogs(){
+  try{
+    const s=await fetchStats();
+    allLogs=(s.recent||[]);
+    $("srchTotal").textContent=(s.total||0)+" total";
+    applySearchFilter();
+    addLog("Search logs loaded — "+allLogs.length+" recent entries","info");
+  }catch(e){
+    addLog("Search logs failed: "+e.message,"err");
+  }
+}
+window.renderSearchLogs=renderSearchLogs;
+function applySearchFilter(){
+  const q=($("srchFilter").value||"").toLowerCase().trim();
+  const filtered=q?allLogs.filter(l=>(l.model||"").toLowerCase().includes(q)||(l.part||"").toLowerCase().includes(q)):allLogs;
+  const body=$("srchBody");
+  if(!filtered.length){
+    body.innerHTML='<tr><td colspan="5" style="padding:24px;text-align:center;font-family:var(--fm);font-size:9px;letter-spacing:2px;color:var(--chalk-3);text-transform:uppercase;">No results</td></tr>';
+    return;
+  }
+  body.innerHTML=filtered.map((l,i)=>`
+    <tr>
+      <td class="rank">${i+1}</td>
+      <td style="font-size:9px;color:var(--chalk-4)">${esc(l.ts?l.ts.slice(11,19):"—")}</td>
+      <td class="model-name">${esc(l.model||"—")}</td>
+      <td style="color:var(--amber-2);font-family:var(--fm);font-size:10px">${esc(l.part||"—")}</td>
+      <td class="${(l.resultCount||0)>0?"count-val":""}style="color:${(l.resultCount||0)>0?"var(--ok)":"var(--err)"}">${l.resultCount||0}</td>
+    </tr>`).join("");
+}
+
+/* ── TRENDING ── */
+async function renderTrending(){
+  try{
+    const s=await fetchStats();
+    const topM=s.topModels||[];
+    const topP=s.topParts||[];
+    $("trendTotal").textContent=(s.total||0)+" searches today";
+
+    // Models
+    if(!topM.length){
+      $("trendModelList").innerHTML='<div class="empty"><i class="fa-solid fa-fire"></i><span class="empty-t">no data yet</span></div>';
+    }else{
+      const mx=topM[0]?.count||1;
+      $("trendModelList").innerHTML='<table class="data-table"><thead><tr><th>#</th><th>Model</th><th>Searches</th><th class="bar-cell">Bar</th></tr></thead><tbody>'+
+      topM.map((it,i)=>`<tr><td class="rank">${i+1}</td><td class="model-name">${esc(it.name)}</td><td class="count-val">${it.count}</td><td class="bar-cell"><div class="bar-bg"><div class="bar-fill" style="width:${Math.round(it.count/mx*100)}%"></div></div></td></tr>`).join("")+
+      '</tbody></table>';
+    }
+    // Parts
+    if(!topP.length){
+      $("trendPartList").innerHTML='<div class="empty"><i class="fa-solid fa-list"></i><span class="empty-t">no data yet</span></div>';
+    }else{
+      const mx2=topP[0]?.count||1;
+      $("trendPartList").innerHTML='<table class="data-table"><thead><tr><th>#</th><th>Category</th><th>Searches</th><th class="bar-cell">Bar</th></tr></thead><tbody>'+
+      topP.map((it,i)=>`<tr><td class="rank">${i+1}</td><td class="model-name">${esc(it.name)}</td><td class="count-val">${it.count}</td><td class="bar-cell"><div class="bar-bg"><div class="bar-fill" style="width:${Math.round(it.count/mx2*100)}%"></div></div></td></tr>`).join("")+
+      '</tbody></table>';
+    }
+    addLog("Trending loaded","info");
+  }catch(e){addLog("Trending failed: "+e.message,"err");}
+}
+window.renderTrending=renderTrending;
+
+/* ── HEALTH ── */
+async function renderHealth(){
+  try{
+    const h=await fetchHealth();
+    $("healthStatus").textContent=h.status||"—";
+    $("healthStatus").className="ph-badge "+((h.status==="operational")?"ok":"err");
+    $("hStatus").textContent=h.status||"—";
+    $("hStatus").className="hv "+((h.status==="operational")?"ok":"err");
+    $("hUptime").textContent=h.uptime||"—";
+    $("hRss").textContent=h.memory?.rss||"—";
+    $("hHeap").textContent=h.memory?.heapUsed||"—";
+    $("hHeapTotal").textContent=h.memory?.heapTotal||"—";
+    $("hNode").textContent=h.node||"—";
+    $("hEnv").textContent=h.environment||"—";
+    $("hStarted").textContent=fmtDate(h.startedAt);
+    $("hSyncing").textContent=h.syncing?"yes — in progress":"no";
+    $("hSyncing").className="hv "+(h.syncing?"warn":"ok");
+    $("hSearches").textContent=(h.metrics?.searches||0).toLocaleString();
+    $("hRequests").textContent=(h.metrics?.requests||0).toLocaleString();
+    $("hErrors").textContent=(h.metrics?.errors||0);
+    $("hErrors").className="hv "+(h.metrics?.errors>0?"err":"ok");
+
+    // Memory bars — parse values like "45.2MB"
+    function parseMB(s){if(!s)return 0;const m=String(s).match(/([\d.]+)/);return m?parseFloat(m[1]):0;}
+    const heapU=parseMB(h.memory?.heapUsed);
+    const heapT=parseMB(h.memory?.heapTotal);
+    const rss=parseMB(h.memory?.rss);
+    if(heapT>0){
+      const pct=Math.min(100,Math.round(heapU/heapT*100));
+      $("heapBar").style.width=pct+"%";
+      $("heapPct").textContent=pct+"% ("+h.memory?.heapUsed+" / "+h.memory?.heapTotal+")";
+    }
+    if(rss>0){
+      const pct=Math.min(100,Math.round(rss/512*100)); // assume 512MB max
+      $("rssBar").style.width=pct+"%";
+      $("rssPct").textContent=h.memory?.rss;
+    }
+    addLog("Health loaded — "+h.status,"ok");
+  }catch(e){addLog("Health load failed: "+e.message,"err");}
+}
+window.renderHealth=renderHealth;
+
+/* ── DATABASE ── */
+async function renderDatabase(){
+  try{
+    const[h,cats]=await Promise.all([fetchHealth(),fetchCategories()]);
+    const d=h.data||{};
+    $("dbVer").textContent="v"+(d.version||"—");
+    $("dbVer").className="ph-badge active";
+    $("dbVerVal").textContent=d.version||"—";
+    $("dbLastSync").textContent=ago(d.lastSync);
+    $("dbCats").textContent=d.categories||"—";
+    $("dbModels").textContent=(d.models||0).toLocaleString();
+    $("dbSyncCount").textContent=d.syncCount||0;
+    $("dbStarted").textContent=fmtDate(h.startedAt);
+
+    // Categories table
+    const list=cats.categories||[];
+    $("dbCatTag").textContent=list.length+" categories";
+    $("dbCatTag").className="ph-badge active";
+    if(!list.length){
+      $("dbCatList").innerHTML='<div class="empty"><i class="fa-solid fa-database"></i><span class="empty-t">no categories</span></div>';
+    }else{
+      const mx=Math.max(...list.map(c=>c.modelCount||0));
+      $("dbCatList").innerHTML=
+        '<div style="padding:0;">'+
+        list.map(cat=>`
+          <div class="cat-row">
+            <span class="cat-name">${esc(cat.name)}</span>
+            <span class="cat-count">${(cat.modelCount||0).toLocaleString()}</span>
+            <div class="cat-bar-wrap">
+              <div class="cat-bar"><div class="cat-bar-fill" style="width:${mx>0?Math.round((cat.modelCount||0)/mx*100):0}%"></div></div>
+              <span class="cat-pct">${mx>0?Math.round((cat.modelCount||0)/mx*100):0}%</span>
+            </div>
+          </div>`).join("")+
+        '</div>';
+    }
+    addLog("Database loaded — "+(d.models||0).toLocaleString()+" models","ok");
+  }catch(e){addLog("Database load failed: "+e.message,"err");}
+}
+window.renderDatabase=renderDatabase;
+
+/* ── CONTROLS ── */
+$("ctrlSync").addEventListener("click",()=>{
+  confirm("Force sync","This will immediately fetch live data from combosupport.in and rebuild the entire search index. The server will be briefly busy.",async()=>{
+    $("ctrlSync").disabled=true;
+    addLog("Force sync triggered...","warn");
+    try{
+      const r=await fetch(API+"/admin/refresh?key="+encodeURIComponent(KEY));
+      const d=await r.json();
+      if(r.status===409){addLog("Sync already in progress — try again shortly","warn");toast("Already syncing","warn","fa-rotate");}
+      else if(r.ok){addLog("Sync started successfully","ok");toast("Sync started","ok","fa-rotate");setTimeout(()=>{loadOverview();renderHealth();},4000);}
+      else{addLog("Sync failed: "+d.error,"err");toast("Sync failed","err","fa-triangle-exclamation");}
+    }catch(e){addLog("Sync error: "+e.message,"err");toast("Network error","err","fa-wifi-slash");}
+    finally{$("ctrlSync").disabled=false;}
+  });
+});
+
+$("ctrlBackup").addEventListener("click",async()=>{
+  addLog("Downloading backup...","info");
+  try{
+    const r=await fetch(API+"/admin/backup?key="+encodeURIComponent(KEY));
+    if(!r.ok)throw new Error("status "+r.status);
+    const blob=await r.blob();
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url;a.download="uniparts-backup-"+new Date().toISOString().slice(0,10)+".json";
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    addLog("Backup downloaded","ok");
+    toast("Backup downloaded","ok","fa-download");
+  }catch(e){addLog("Backup failed: "+e.message,"err");toast("Backup failed","err","fa-triangle-exclamation");}
+});
+
+$("ctrlRefreshStats").addEventListener("click",()=>{
+  addLog("Refreshing all stats...","info");
+  loadOverview();
+  toast("Refreshing...","info","fa-rotate");
+});
+
+/* ── TOP SYNC BUTTON ── */
+$("btnSyncTop").addEventListener("click",()=>{
+  confirm("Force sync","Rebuild search index from live data now?",async()=>{
+    $("btnSyncTop").disabled=true;
+    $("btnSyncTop").innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Syncing...';
+    try{
+      const r=await fetch(API+"/admin/refresh?key="+encodeURIComponent(KEY));
+      if(r.status===409){toast("Already syncing","warn","fa-rotate");addLog("Sync already in progress","warn");}
+      else if(r.ok){toast("Sync started","ok","fa-rotate");addLog("Sync started from topbar","ok");setTimeout(loadOverview,4000);}
+      else{toast("Sync failed","err","fa-triangle-exclamation");addLog("Sync failed","err");}
+    }catch(e){toast("Network error","err","fa-wifi-slash");}
+    finally{$("btnSyncTop").disabled=false;$("btnSyncTop").innerHTML='<i class="fa-solid fa-rotate"></i> Sync now';}
+  });
+});
+
+/* ── AUTO REFRESH ── */
+setInterval(loadOverview,30000);  // overview every 30s
+setInterval(()=>{                 // health badge every 15s
+  fetchHealth().then(h=>{
+    setStatus(h.status==="operational",(h.data?.models||0).toLocaleString()+" models");
+  }).catch(()=>setStatus(false,"offline"));
+},15000);
+
+/* ── INIT ── */
+loadOverview();
+
+})();
+</script>
+</body>
+</html>
