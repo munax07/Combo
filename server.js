@@ -638,68 +638,56 @@ const server = http.createServer(async (req, res) => {
   }
 
   // GSMArena search
-  if (pathname === "/specs-search") {
-    const rl = checkRateLimit(ip, "strict");
-    if (!rl.allowed) return sendJson(res, req, 429, { error: "Rate limit" }, start);
-    const query = (url.searchParams.get("q") || "").trim().slice(0, 80);
-    if (!query) return sendJson(res, req, 400, { error: "Missing query" }, start);
-    try {
-      const gsmRes = await axios.get(
-        `https://www.gsmarena.com/results.php3?sQuickSearch=yes&sName=${encodeURIComponent(query)}`,
-        {
-          headers: { "User-Agent": "Mozilla/5.0 (compatible; UNIPARTS/1.0)" },
-          timeout: GSMARENA_TIMEOUT,
-          signal:  AbortSignal.timeout(GSMARENA_TIMEOUT + 2000)
-        }
-      );
-      const $       = cheerio.load(gsmRes.data);
-      const results = [];
-      $(".makers li").each((_, el) => {
-        const a     = $(el).find("a");
-        const href  = a.attr("href");
-        const title = a.find("img").attr("title") || a.text().trim();
-        const img   = a.find("img").attr("src");
-        if (href && title) results.push({ id: href, title, img });
-      });
-      return sendJson(res, req, 200, { success: true, results }, start, CACHE.short);
-    } catch (err) {
-      return sendJson(res, req, 502, { error: "GSMArena temporarily unavailable" }, start);
-    }
-  }
+  // GSMArena search
+if (pathname === "/specs-search") {
+  const rl = checkRateLimit(ip, "strict");
+  if (!rl.allowed) return sendJson(res, req, 429, { error: "Rate limit" }, start);
+  const query = (url.searchParams.get("q") || "").trim().slice(0, 80);
+  if (!query) return sendJson(res, req, 400, { error: "Missing query" }, start);
+  try {
+    const gsmRes = await axios.get(
+      `https://www.gsmarena.com/results.php3?sQuickSearch=yes&sName=${encodeURIComponent(query)}`,
+      {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+          "Accept-Language": "en-US,en;q=0.5",
+          "Accept-Encoding": "gzip, deflate, br",
+          "Referer": "https://www.gsmarena.com/"
+        },
+        timeout: 15000,
+        signal: AbortSignal.timeout(17000)
+      }
+    );
+    const $ = cheerio.load(gsmRes.data);
+    const results = [];
 
-  // GSMArena details
-  if (pathname === "/specs-details") {
-    const rl = checkRateLimit(ip, "strict");
-    if (!rl.allowed) return sendJson(res, req, 429, { error: "Rate limit" }, start);
-    const id = (url.searchParams.get("id") || "").trim().slice(0, 120);
-    if (!id || /[<>"'\\]/.test(id) || id.includes("..") || id.includes("//")) {
-      return sendJson(res, req, 400, { error: "Invalid id" }, start);
-    }
-    try {
-      const detailRes = await axios.get(`https://www.gsmarena.com/${id}`, {
-        headers: { "User-Agent": "Mozilla/5.0 (compatible; UNIPARTS/1.0)" },
-        timeout: GSMARENA_TIMEOUT,
-        signal:  AbortSignal.timeout(GSMARENA_TIMEOUT + 2000)
+    // Try the classic selector
+    $(".makers li, .makers ul li").each((_, el) => {
+      const a = $(el).find("a");
+      const href = a.attr("href");
+      const title = a.find("img").attr("title") || a.text().trim();
+      const img = a.find("img").attr("src");
+      if (href && title) results.push({ id: href, title, img });
+    });
+
+    // If still empty, try alternative selectors
+    if (results.length === 0) {
+      $(".result-item a, .search-results a, .phone-name a").each((_, el) => {
+        const href = $(el).attr("href");
+        const title = $(el).text().trim();
+        if (href && title && href.includes("/")) {
+          results.push({ id: href, title, img: "" });
+        }
       });
-      const $     = cheerio.load(detailRes.data);
-      const name  = $(".specs-phone-name-title").text().trim();
-      const img   = $(".specs-photo-main img").attr("src");
-      const specs = {};
-      $("table").each((_, table) => {
-        const head = $(table).find("th").text().trim();
-        if (!head) return;
-        specs[head] = {};
-        $(table).find("tr").each((_, row) => {
-          const k = $(row).find("td").eq(0).text().trim();
-          const v = $(row).find("td").eq(1).text().replace(/\n/g, " ").trim();
-          if (k && v) specs[head][k] = v;
-        });
-      });
-      return sendJson(res, req, 200, { success: true, name, img, specs }, start, CACHE.medium);
-    } catch (err) {
-      return sendJson(res, req, 502, { error: "GSMArena temporarily unavailable" }, start);
     }
+
+    return sendJson(res, req, 200, { success: true, results }, start, CACHE.short);
+  } catch (err) {
+    log("error", "GSMArena fetch failed", { error: err.message });
+    return sendJson(res, req, 502, { error: "GSMArena temporarily unavailable" }, start);
   }
+}
 
   // Admin: panel HTML
   if (pathname === "/admin") {
