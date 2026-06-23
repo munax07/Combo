@@ -638,23 +638,27 @@ const server = http.createServer(async (req, res) => {
   }
 
   // GSMArena search
-  // GSMArena search
+// GSMArena search
 if (pathname === "/specs-search") {
   const rl = checkRateLimit(ip, "strict");
   if (!rl.allowed) return sendJson(res, req, 429, { error: "Rate limit" }, start);
   const query = (url.searchParams.get("q") || "").trim().slice(0, 80);
   if (!query) return sendJson(res, req, 400, { error: "Missing query" }, start);
+
+  const USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+  const HEADERS = {
+    "User-Agent": USER_AGENT,
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.5",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Referer": "https://www.gsmarena.com/"
+  };
+
   try {
     const gsmRes = await axios.get(
       `https://www.gsmarena.com/results.php3?sQuickSearch=yes&sName=${encodeURIComponent(query)}`,
       {
-        headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-          "Accept-Language": "en-US,en;q=0.5",
-          "Accept-Encoding": "gzip, deflate, br",
-          "Referer": "https://www.gsmarena.com/"
-        },
+        headers: HEADERS,
         timeout: 15000,
         signal: AbortSignal.timeout(17000)
       }
@@ -662,27 +666,48 @@ if (pathname === "/specs-search") {
     const $ = cheerio.load(gsmRes.data);
     const results = [];
 
-    // Try the classic selector
-    $(".makers li, .makers ul li").each((_, el) => {
-      const a = $(el).find("a");
-      const href = a.attr("href");
-      const title = a.find("img").attr("title") || a.text().trim();
-      const img = a.find("img").attr("src");
-      if (href && title) results.push({ id: href, title, img });
-    });
+    // Try multiple selectors – order them from most specific to most generic
+    const selectors = [
+      ".makers li",           // classic
+      "ul.makers li",         // if class is on ul
+      ".makers ul li",        // if .makers is a div containing ul
+      ".search-results li",
+      "#results li",
+      ".result-item",
+      ".phone-name"
+    ];
 
-    // If still empty, try alternative selectors
+    for (const sel of selectors) {
+      $(sel).each((_, el) => {
+        // Try to extract link and title
+        const a = $(el).find("a").first();
+        const href = a.attr("href");
+        let title = a.find("img").attr("title") || a.find("img").attr("alt") || a.text().trim();
+        if (!title && $(el).text().trim()) {
+          title = $(el).text().trim();
+        }
+        const img = a.find("img").attr("src") || "";
+        if (href && title) {
+          results.push({ id: href, title, img });
+        }
+      });
+      if (results.length > 0) break; // stop if we found something
+    }
+
+    // If still empty, try a last‑resort: look for any <a> with href containing "/"
     if (results.length === 0) {
-      $(".result-item a, .search-results a, .phone-name a").each((_, el) => {
+      $("a[href*='/']").each((_, el) => {
         const href = $(el).attr("href");
         const title = $(el).text().trim();
-        if (href && title && href.includes("/")) {
+        if (href && title && href.startsWith("/") && title.length > 2) {
           results.push({ id: href, title, img: "" });
         }
       });
     }
 
-    return sendJson(res, req, 200, { success: true, results }, start, CACHE.short);
+    // Deduplicate by id
+    const unique = results.filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
+    return sendJson(res, req, 200, { success: true, results: unique }, start, CACHE.short);
   } catch (err) {
     log("error", "GSMArena fetch failed", { error: err.message });
     return sendJson(res, req, 502, { error: "GSMArena temporarily unavailable" }, start);
