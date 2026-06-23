@@ -637,7 +637,6 @@ const server = http.createServer(async (req, res) => {
     }, start, CACHE.short);
   }
 
-  // GSMArena search
 // GSMArena search
 if (pathname === "/specs-search") {
   const rl = checkRateLimit(ip, "strict");
@@ -651,62 +650,69 @@ if (pathname === "/specs-search") {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
     "Accept-Language": "en-US,en;q=0.5",
     "Accept-Encoding": "gzip, deflate, br",
-    "Referer": "https://www.gsmarena.com/"
+    "Referer": "https://m.gsmarena.com/"
   };
 
+  // Use mobile URL – it's simpler and less likely to block
+  const url = `https://m.gsmarena.com/results.php3?sName=${encodeURIComponent(query)}`;
+
   try {
-    const gsmRes = await axios.get(
-      `https://www.gsmarena.com/results.php3?sQuickSearch=yes&sName=${encodeURIComponent(query)}`,
-      {
-        headers: HEADERS,
-        timeout: 15000,
-        signal: AbortSignal.timeout(17000)
-      }
-    );
+    const gsmRes = await axios.get(url, {
+      headers: HEADERS,
+      timeout: 15000,
+      signal: AbortSignal.timeout(17000)
+    });
     const $ = cheerio.load(gsmRes.data);
     const results = [];
 
-    // Try multiple selectors – order them from most specific to most generic
-    const selectors = [
-      ".makers li",           // classic
-      "ul.makers li",         // if class is on ul
-      ".makers ul li",        // if .makers is a div containing ul
-      ".search-results li",
-      "#results li",
-      ".result-item",
-      ".phone-name"
-    ];
+    // Mobile structure often uses <a> inside <li> inside <ul class="results">
+    // We'll just find every <a> that has an href starting with "/" and contains a phone name
+    $("a").each((_, el) => {
+      const href = $(el).attr("href");
+      // Only keep links that point to phone pages (start with "/")
+      if (!href || !href.startsWith("/")) return;
+      // Skip links that are for other purposes (e.g., "/refine/", "/compare/")
+      if (href.includes("refine") || href.includes("compare") || href.includes("search")) return;
 
-    for (const sel of selectors) {
-      $(sel).each((_, el) => {
-        // Try to extract link and title
-        const a = $(el).find("a").first();
-        const href = a.attr("href");
-        let title = a.find("img").attr("title") || a.find("img").attr("alt") || a.text().trim();
-        if (!title && $(el).text().trim()) {
-          title = $(el).text().trim();
+      // Try to get title from image alt, title attribute, or text
+      let title = $(el).find("img").attr("alt") || $(el).find("img").attr("title") || "";
+      if (!title) {
+        // If no image, use the text content of the link
+        const text = $(el).text().trim();
+        // Filter out short text or "Compare" etc.
+        if (text.length > 2 && !text.includes("Compare")) {
+          title = text;
         }
-        const img = a.find("img").attr("src") || "";
-        if (href && title) {
-          results.push({ id: href, title, img });
-        }
-      });
-      if (results.length > 0) break; // stop if we found something
-    }
+      }
+      // Clean title: remove extra spaces
+      title = title.replace(/\s+/g, " ").trim();
+      if (title && !results.some(r => r.id === href)) {
+        // Try to get image src
+        const img = $(el).find("img").attr("src") || "";
+        results.push({ id: href, title, img });
+      }
+    });
 
-    // If still empty, try a last‑resort: look for any <a> with href containing "/"
+    // If we still have nothing, try a more targeted selector for mobile
     if (results.length === 0) {
-      $("a[href*='/']").each((_, el) => {
+      $("ul.results li a, .result a, .phone-item a").each((_, el) => {
         const href = $(el).attr("href");
-        const title = $(el).text().trim();
-        if (href && title && href.startsWith("/") && title.length > 2) {
-          results.push({ id: href, title, img: "" });
+        if (!href || !href.startsWith("/")) return;
+        let title = $(el).find("img").attr("alt") || $(el).text().trim();
+        if (title) {
+          results.push({ id: href, title, img: $(el).find("img").attr("src") || "" });
         }
       });
     }
 
-    // Deduplicate by id
+    // Deduplicate
     const unique = results.filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
+
+    // If still empty, log the HTML snippet for debugging (only in production logs)
+    if (unique.length === 0) {
+      log("warn", "No results found for specs-search", { query, snippet: gsmRes.data.slice(0, 500) });
+    }
+
     return sendJson(res, req, 200, { success: true, results: unique }, start, CACHE.short);
   } catch (err) {
     log("error", "GSMArena fetch failed", { error: err.message });
