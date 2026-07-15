@@ -35,7 +35,17 @@ const GZIP_THRESHOLD   = 1024;               // bytes
 const RATE_MAP_MAX     = 10_000;             // max unique IPs in rate store
 const PATH_HITS_MAX    = 200;                // FIX: cap pathHits object size
 const STATS_CACHE_TTL  = 30_000;             // 30s admin stats cache
-const GSMARENA_TIMEOUT = 10_000;             // 10s
+const GSMARENA_TIMEOUT = 20_000;             // 20s — enough for cold Render start
+
+// Rotate user agents so GSMArena doesn't block us
+const GSM_UAS = [
+  "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
+  "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+];
+let uaIdx = 0;
+function nextUA() { uaIdx = (uaIdx + 1) % GSM_UAS.length; return GSM_UAS[uaIdx]; }
 
 const RATE_LIMITS  = { loose: 120, normal: 40, strict: 12, admin: 15 };
 const RL_WINDOW_MS = 60_000;
@@ -112,7 +122,11 @@ function isValidModel(s) {
 
 function normalizeForSearch(s) {
   if (!s) return "";
-  return s.toLowerCase().replace(/[^\w\s]/g, " ").replace(/\s+/g, " ").trim();
+  return s.toLowerCase()
+    .replace(/\+/g, " plus ")          // A15+ → a15 plus
+    .replace(/[^\w\s]/g, " ")          // strip punctuation
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function createCategoryKey(name) {
@@ -278,30 +292,73 @@ function searchCategory(categoryKey, query) {
   if (!cat) return null;
   const qNorm = normalizeForSearch(query);
   if (!qNorm) return [];
-  const words  = qNorm.split(" ").filter(w => w.length > 1);
+
+  // Split query into tokens — each must be a meaningful word
+  const qWords = qNorm.split(" ").filter(w => w.length > 0);
+  // Extract numeric tokens from query (model numbers like "13", "a15", "s24")
+  const qNums  = qWords.filter(w => /\d/.test(w));
+
   const scored = [];
   const seen   = new Set();
 
   for (const model of cat.models) {
-    const c = model.searchNorm;
+    const c      = model.searchNorm;
+    const cWords = c.split(" ").filter(w => w.length > 0);
     if (seen.has(c)) continue;
+
     let score = 0;
-    if (c === qNorm)                              score = 100;
-    else if (c.includes(qNorm))                   score = 90;
-    else if (words.every(w => c.includes(w)))     score = 75;
-    else {
-      const hits = words.filter(w => c.includes(w)).length;
-      if (hits > 0 && hits / words.length >= 0.7) score = 55;
+
+    // Exact full match
+    if (c === qNorm) {
+      score = 100;
     }
+    // Query is fully contained in compatibility string
+    else if (c.includes(qNorm)) {
+      // FIX: word-boundary check — "a5" must not match inside "a55"
+      const boundary = new RegExp(`(?<![\\w])${qNorm.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}(?![\\w])`);
+      score = boundary.test(c) ? 90 : 0;
+    }
+    // All query words present with word-boundary check
+    else {
+      const allMatch = qWords.every(w => {
+        const wRe = new RegExp(`(?<![\\w])${w.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}(?![\\w])`);
+        return wRe.test(c);
+      });
+      if (allMatch) {
+        score = 80;
+        // Boost if brand matches
+        const brandNorm = normalizeForSearch(model.brand);
+        if (qNorm.startsWith(brandNorm) || brandNorm.split(" ").some(bw => qWords.includes(bw))) {
+          score = 85;
+        }
+      } else {
+        // Partial — only if numeric tokens all match (critical for model accuracy)
+        // AND at least 80% of all words match with word-boundary
+        if (qNums.length > 0) {
+          const numsMatch = qNums.every(n => {
+            const nRe = new RegExp(`(?<![\\w])${n.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}(?![\\w])`);
+            return nRe.test(c);
+          });
+          if (numsMatch) {
+            const hitCount = qWords.filter(w => {
+              const wRe = new RegExp(`(?<![\\w])${w.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}(?![\\w])`);
+              return wRe.test(c);
+            }).length;
+            if (hitCount / qWords.length >= 0.8) score = 65;
+          }
+        }
+      }
+    }
+
     if (score > 0) {
       seen.add(c);
       scored.push({ ...model, score });
-      if (scored.length >= MAX_RESULTS * 2) break;
+      if (scored.length >= MAX_RESULTS * 3) break;
     }
   }
 
   return scored
-    .sort((a, b) => b.score - a.score)
+    .sort((a, b) => b.score - a.score || a.compatibility.length - b.compatibility.length)
     .slice(0, MAX_RESULTS)
     .map(({ brand, compatibility, score }) => ({ brand, compatibility, score }));
 }
@@ -637,88 +694,130 @@ const server = http.createServer(async (req, res) => {
     }, start, CACHE.short);
   }
 
-// GSMArena search
-if (pathname === "/specs-search") {
-  const rl = checkRateLimit(ip, "strict");
-  if (!rl.allowed) return sendJson(res, req, 429, { error: "Rate limit" }, start);
-  const query = (url.searchParams.get("q") || "").trim().slice(0, 80);
-  if (!query) return sendJson(res, req, 400, { error: "Missing query" }, start);
-
-  const USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
-  const HEADERS = {
-    "User-Agent": USER_AGENT,
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-    "Accept-Language": "en-US,en;q=0.5",
-    "Accept-Encoding": "gzip, deflate, br",
-    "Referer": "https://m.gsmarena.com/"
-  };
-
-  // Use mobile URL – it's simpler and less likely to block
-  const url = `https://m.gsmarena.com/results.php3?sName=${encodeURIComponent(query)}`;
-
-  try {
-    const gsmRes = await axios.get(url, {
-      headers: HEADERS,
-      timeout: 15000,
-      signal: AbortSignal.timeout(17000)
-    });
-    const $ = cheerio.load(gsmRes.data);
-    const results = [];
-
-    // Mobile structure often uses <a> inside <li> inside <ul class="results">
-    // We'll just find every <a> that has an href starting with "/" and contains a phone name
-    $("a").each((_, el) => {
-      const href = $(el).attr("href");
-      // Only keep links that point to phone pages (start with "/")
-      if (!href || !href.startsWith("/")) return;
-      // Skip links that are for other purposes (e.g., "/refine/", "/compare/")
-      if (href.includes("refine") || href.includes("compare") || href.includes("search")) return;
-
-      // Try to get title from image alt, title attribute, or text
-      let title = $(el).find("img").attr("alt") || $(el).find("img").attr("title") || "";
-      if (!title) {
-        // If no image, use the text content of the link
-        const text = $(el).text().trim();
-        // Filter out short text or "Compare" etc.
-        if (text.length > 2 && !text.includes("Compare")) {
-          title = text;
+  // GSMArena search
+  if (pathname === "/specs-search") {
+    const rl = checkRateLimit(ip, "strict");
+    if (!rl.allowed) return sendJson(res, req, 429, { error: "Rate limit" }, start);
+    const query = (url.searchParams.get("q") || "").trim().slice(0, 80);
+    if (!query) return sendJson(res, req, 400, { error: "Missing query" }, start);
+    try {
+      // Correct GSMArena search URL — confirmed from their actual search form
+      // res.php3?sSearch=query  (NOT results.php3?sQuickSearch=yes&sName=)
+      const searchUrl = `https://www.gsmarena.com/res.php3?sSearch=${encodeURIComponent(query)}`;
+      const gsmRes = await axios.get(searchUrl,
+        {
+          headers: {
+            "User-Agent": nextUA(),
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.5",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Connection": "keep-alive"
+          },
+          timeout: GSMARENA_TIMEOUT,
+          signal:  AbortSignal.timeout(GSMARENA_TIMEOUT + 3000)
         }
+      );
+      const $g      = cheerio.load(gsmRes.data);
+      const results = [];
+
+      // Try multiple selectors — GSMArena occasionally updates their markup
+      const sels = [".makers li", ".makers ul li", "ul.row li", "[class*=makers] li"];
+      let hit = false;
+      for (const sel of sels) {
+        $g(sel).each((_, el) => {
+          const a     = $g(el).find("a");
+          const href  = a.attr("href") || "";
+          const title = a.find("img").attr("title") || a.find("strong").text().trim() || a.text().trim();
+          const img   = a.find("img").attr("src") || "";
+          if (href && title) { results.push({ id: href, title, img }); hit = true; }
+        });
+        if (hit) break;
       }
-      // Clean title: remove extra spaces
-      title = title.replace(/\s+/g, " ").trim();
-      if (title && !results.some(r => r.id === href)) {
-        // Try to get image src
-        const img = $(el).find("img").attr("src") || "";
-        results.push({ id: href, title, img });
+
+      // Deep fallback: scan all device page links
+      if (!results.length) {
+        $g("a[href]").each((_, el) => {
+          const href  = $g(el).attr("href") || "";
+          const title = $g(el).find("img").attr("title") || $g(el).find("strong").text().trim() || $g(el).text().trim();
+          const img   = $g(el).find("img").attr("src") || "";
+          // GSMArena device pages end in -NNNN.php
+          if (href && title && /^[\w-]+-\d+\.php$/.test(href)) {
+            results.push({ id: href, title, img });
+          }
+        });
       }
-    });
 
-    // If we still have nothing, try a more targeted selector for mobile
-    if (results.length === 0) {
-      $("ul.results li a, .result a, .phone-item a").each((_, el) => {
-        const href = $(el).attr("href");
-        if (!href || !href.startsWith("/")) return;
-        let title = $(el).find("img").attr("alt") || $(el).text().trim();
-        if (title) {
-          results.push({ id: href, title, img: $(el).find("img").attr("src") || "" });
-        }
-      });
+      return sendJson(res, req, 200, { success: true, results: results.slice(0, 30) }, start, CACHE.short);
+    } catch (err) {
+      return sendJson(res, req, 502, { error: "GSMArena temporarily unavailable" }, start);
     }
-
-    // Deduplicate
-    const unique = results.filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
-
-    // If still empty, log the HTML snippet for debugging (only in production logs)
-    if (unique.length === 0) {
-      log("warn", "No results found for specs-search", { query, snippet: gsmRes.data.slice(0, 500) });
-    }
-
-    return sendJson(res, req, 200, { success: true, results: unique }, start, CACHE.short);
-  } catch (err) {
-    log("error", "GSMArena fetch failed", { error: err.message });
-    return sendJson(res, req, 502, { error: "GSMArena temporarily unavailable" }, start);
   }
-}
+
+  // GSMArena details
+  if (pathname === "/specs-details") {
+    const rl = checkRateLimit(ip, "strict");
+    if (!rl.allowed) return sendJson(res, req, 429, { error: "Rate limit" }, start);
+    const id = (url.searchParams.get("id") || "").trim().slice(0, 120);
+    if (!id || /[<>"'\\]/.test(id) || id.includes("..") || id.includes("//")) {
+      return sendJson(res, req, 400, { error: "Invalid id" }, start);
+    }
+    try {
+      const detailRes = await axios.get(`https://www.gsmarena.com/${id}`, {
+        headers: {
+          "User-Agent": nextUA(),
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          "Accept-Language": "en-US,en;q=0.5",
+          "Accept-Encoding": "gzip, deflate, br",
+          "Connection": "keep-alive"
+        },
+        timeout: GSMARENA_TIMEOUT,
+        signal:  AbortSignal.timeout(GSMARENA_TIMEOUT + 3000)
+      });
+      const $d    = cheerio.load(detailRes.data);
+      // Name: try multiple selectors
+      const name  = $d(".specs-phone-name-title").text().trim()
+                 || $d("h1.specs-phone-name-title").text().trim()
+                 || $d("h1").first().text().trim()
+                 || "Unknown device";
+      // Image
+      const img   = $d(".specs-photo-main img").attr("src")
+                 || $d(".phone-big-photo img").attr("src")
+                 || $d(".specs-photo img").attr("src")
+                 || "";
+      const specs = {};
+
+      // Primary: table-based specs (GSMArena classic layout)
+      $d("#specs-list table, table.specslist, table").each((_, table) => {
+        const head = $d(table).find("th").first().text().trim();
+        if (!head) return;
+        if (!specs[head]) specs[head] = {};
+        $d(table).find("tr").each((_, row) => {
+          const k = $d(row).find("td").eq(0).text().trim();
+          const v = $d(row).find("td").eq(1).text().replace(/\s+/g, " ").trim();
+          if (k && v && k.length < 60) specs[head][k] = v;
+        });
+        // Remove empty sections
+        if (!Object.keys(specs[head]).length) delete specs[head];
+      });
+
+      // Fallback: definition list format
+      if (!Object.keys(specs).length) {
+        $d("dl").each((_, dl) => {
+          const head = $d(dl).prev("h2, h3, th").text().trim() || "Specs";
+          if (!specs[head]) specs[head] = {};
+          $d(dl).find("dt").each((_, dt) => {
+            const k = $d(dt).text().trim();
+            const v = $d(dt).next("dd").text().replace(/\s+/g, " ").trim();
+            if (k && v) specs[head][k] = v;
+          });
+        });
+      }
+
+      return sendJson(res, req, 200, { success: true, name, img, specs }, start, CACHE.medium);
+    } catch (err) {
+      return sendJson(res, req, 502, { error: "GSMArena temporarily unavailable" }, start);
+    }
+  }
 
   // Admin: panel HTML
   if (pathname === "/admin") {
@@ -746,12 +845,19 @@ if (pathname === "/specs-search") {
   if (pathname === "/admin/stats") {
     const rl = checkRateLimit(ip, "admin");
     if (!rl.allowed) return sendJson(res, req, 429, { error: "Rate limit" }, start);
-    if (url.searchParams.get("key") !== ADMIN_KEY) {
-      log("warn", "Admin auth fail", { ip });
-      return sendJson(res, req, 403, { error: "Forbidden" }, start);
-    }
+    const key = url.searchParams.get("key");
     const stats = await getSearchStats();
-    return sendJson(res, req, 200, { ...stats, serverMetrics: metrics }, start, CACHE.noStore);
+    if (key === ADMIN_KEY) {
+      // Full stats for authenticated admin
+      return sendJson(res, req, 200, { ...stats, serverMetrics: metrics }, start, CACHE.noStore);
+    } else {
+      // Public read-only trending only — no sensitive server metrics
+      return sendJson(res, req, 200, {
+        total:     stats.total,
+        topModels: stats.topModels,
+        topParts:  stats.topParts,
+      }, start, CACHE.short);
+    }
   }
 
   // Admin: force refresh
@@ -830,7 +936,7 @@ process.on("unhandledRejection", reason => log("error", "Unhandled rejection", {
   server.listen(PORT, "0.0.0.0", () => {
     const total = Object.values(searchIndex).reduce((s, c) => s + c.models.length, 0);
     console.log("\n🚀 ══════════════════════════════════════════════════");
-    console.log("    UNIPARTS PRO  ·  HYBRID LIVE + BACKUP  ·  FINAL");
+    console.log("    UNIPARTS PRO  ·  HYBRID LIVE + FUCk BACKUP  ·  FINAL");
     console.log(`    🌐  Port         : ${PORT}`);
     console.log(`    🌍  Environment  : ${NODE_ENV}`);
     console.log(`    📦  Categories   : ${Object.keys(searchIndex).length}`);
@@ -861,8 +967,9 @@ setInterval(cleanOldLogs, 24 * 60 * 60 * 1000).unref();
     log("info", "Keep-alive disabled — set RENDER_EXTERNAL_URL to enable");
     return;
   }
-  const PING_INTERVAL = 14 * 60 * 1000; // 14 minutes — just under Render's 15min sleep
-  setInterval(async () => {
+  const PING_INTERVAL = 10 * 60 * 1000; // 10 minutes — well under Render's 15min sleep
+  // Ping immediately after 30s startup delay, then every 10 min
+  const doPing = async () => {
     try {
       await axios.get(selfUrl + "/health", {
         timeout: 10_000,
@@ -872,7 +979,9 @@ setInterval(cleanOldLogs, 24 * 60 * 60 * 1000).unref();
     } catch (err) {
       log("warn", "Keep-alive ping failed", { error: err.message });
     }
-  }, PING_INTERVAL).unref();
+  };
+  setTimeout(doPing, 30_000).unref(); // first ping 30s after start
+  setInterval(doPing, PING_INTERVAL).unref();
   log("info", `Keep-alive active — pinging every 14 min → ${selfUrl}`);
 })();
 
