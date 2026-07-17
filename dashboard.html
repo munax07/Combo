@@ -1339,6 +1339,18 @@ function resetMRes(){$("mResults").innerHTML=mt("Ready to search","Tap a part ca
 function resetDRes(){$("dResults").innerHTML=mt("Awaiting query","Choose a category and enter a phone model to begin.");$("dResB").textContent="—";$("dResB").className="dcb";}
 
 /* ═══ BUILD RESULT CARD ═══ */
+function highlightModel(text, query){
+  // Escape the raw text first, then highlight matching tokens
+  const escaped = esc(text);
+  if(!query) return escaped;
+  // Build a regex from each query word, word-boundary safe, case-insensitive
+  const words = query.trim().split(/\s+/).filter(w=>w.length>1)
+    .map(w=>w.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"));
+  if(!words.length) return escaped;
+  const re = new RegExp("("+words.join("|")+")", "gi");
+  return escaped.replace(re, '<mark style="background:rgba(245,158,11,.28);color:var(--a-l);border-radius:3px;padding:0 2px;font-weight:700;">$1</mark>');
+}
+
 function buildCard(r,i,part,model,catName,isM){
   const t=stag(r.score);
   const sv=isFav(part,model);
@@ -1348,7 +1360,7 @@ function buildCard(r,i,part,model,catName,isM){
   const svB='<button class="rc-btn btn-sv'+(sv?" on":"")+'" data-p="'+esc(part)+'" data-m="'+esc(model)+'" data-c="'+esc(catName)+'"><i class="'+(sv?"fa-solid":"fa-regular")+' fa-star"></i>'+(sv?"Saved":"Save")+'</button>';
   return'<div class="res-card'+(r.score>=100?" exact":"")+'" style="animation-delay:'+(i*.05)+'s">'+
     '<div class="rc-top"><span class="rc-brand"><i class="fa-solid fa-tag"></i>'+esc(r.brand||"Generic")+'</span><div class="rc-tags"><span class="rc-score">'+r.score+'%</span><span class="rc-tag '+t.c+'">'+t.l+'</span></div></div>'+
-    '<div class="rc-compat">'+esc(r.compatibility)+'</div>'+
+    '<div class="rc-compat">'+highlightModel(r.compatibility,model)+'</div>'+
     '<div class="rc-actions">'+cpB+waB+svB+'</div>'+
   '</div>';
 }
@@ -1554,36 +1566,36 @@ $("dClrBtn").addEventListener("click",()=>{
   $("dModelIn").focus();resetDRes();
 });
 
-/* ═══ MOBILE SPECS ═══ */
-async function doMSpecs(){
+/* ═══ MOBILE SPECS — browser-side redirect (server IP gets blocked by GSMArena) ═══ */
+function doMSpecs(){
   const q=$("mSpecsIn").value.trim();
   if(!q){toast("Enter a device name","err","fa-mobile-screen");return;}
-  mSQ=q;saveRec("specs::"+q);
-  if(mSAb)mSAb.abort();mSAb=new AbortController();
-  $("mSpecsBtn").disabled=true;$("mSpecsBtn").innerHTML='<i class="fa-solid fa-spinner fa-spin"></i>';
-  // FIX: properly switch to scSpecs tab AND highlight tab bar button
+  saveRec("specs::"+q);
+  // Open GSMArena search directly in user's browser — their IP is never blocked
+  window.open("https://www.gsmarena.com/res.php3?sSearch="+encodeURIComponent(q),"_blank");
+  // Also show a helpful card in the specs screen
   document.querySelectorAll(".tab").forEach(t=>t.classList.remove("on"));
   document.querySelectorAll(".screen").forEach(s=>s.classList.remove("on"));
   const specsTab=document.querySelector('[data-sc="scSpecs"]');
   if(specsTab)specsTab.classList.add("on");
   const specsScr=$("scSpecs");if(specsScr)specsScr.classList.add("on");
-  const wrap=$("mSpecsRes");
-  wrap.innerHTML='<div class="sp-wrap"><div class="spinner"></div><span class="sp-lbl">Searching devices...</span></div>';
-  try{
-    const res=await fetch(API+"/specs-search?q="+encodeURIComponent(q),{signal:mSAb.signal});
-    const data=await res.json();
-    if(!data.success||!data.results?.length){wrap.innerHTML=mt("No devices found","Try brand + model name.","fa-solid fa-satellite-dish");return;}
-    wrap.innerHTML='<div class="pg" style="padding-bottom:8px"><div class="dev-grid">'+data.results.map((dv,i)=>'<div class="dev-card" data-id="'+esc(dv.id)+'" data-title="'+esc(dv.title)+'" style="animation-delay:'+(i*.04)+'s"><img class="dev-img" src="'+esc(dv.img||"")+'" onerror="this.style.display=\'none\'" alt="'+esc(dv.title)+'"><div class="dev-name">'+esc(dv.title)+'</div></div>').join("")+'</div></div>';
-    wrap.querySelectorAll(".dev-card").forEach(c=>c.addEventListener("click",()=>{
-      // Auto-fill model name into parts search so user can instantly search parts
-      const title=c.dataset.title;
-      if(title){$("mModelIn").value=title;mSQ=title;}
-      loadMSpecD(c.dataset.id,title);
-    }));
-  }catch(e){
-    if(e.name==="AbortError")return;
-    wrap.innerHTML=mt("Search failed","GSMArena may be unavailable.","fa-solid fa-triangle-exclamation");
-  }finally{$("mSpecsBtn").disabled=false;$("mSpecsBtn").innerHTML='<i class="fa-solid fa-satellite-dish"></i>Search';mSAb=null;}
+  $("mSpecsRes").innerHTML=
+    '<div class="pg">'+
+    '<div class="card" style="overflow:visible">'+
+      '<div class="ch"><span class="ct"><i class="fa-solid fa-satellite-dish"></i>Specs search</span></div>'+
+      '<div style="padding:16px;display:flex;flex-direction:column;gap:12px;">'+
+        '<div style="padding:13px 14px;background:var(--a-bg);border:1px solid var(--a-b);border-radius:var(--r12);">'+
+          '<div style="font-size:13px;font-weight:600;color:var(--a-l);margin-bottom:4px;"><i class="fa-solid fa-arrow-up-right-from-square"></i> Opened GSMArena</div>'+
+          '<div style="font-size:12px;color:var(--t2);line-height:1.6;">Searching for <strong style="color:var(--t0);">'+esc(q)+'</strong> on GSMArena. Check the new tab that just opened.</div>'+
+        '</div>'+
+        '<div style="font-size:12px;color:var(--t3);line-height:1.7;padding:0 2px;">'+
+          'Tap a device on GSMArena to see full specs. Then come back here and use the <strong style="color:var(--t1);">Parts search</strong> to find compatible parts.'+
+        '</div>'+
+        '<button onclick="window.open(\'https://www.gsmarena.com/res.php3?sSearch='+encodeURIComponent(q)+'\',\'_blank\')" style="padding:11px;border:none;border-radius:var(--r12);background:linear-gradient(135deg,var(--a-l),var(--a));font-family:var(--font);font-size:14px;font-weight:600;color:#000;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;"><i class="fa-solid fa-magnifying-glass"></i>Open GSMArena again</button>'+
+        '<button onclick="document.querySelector(\'[data-sc=scSearch]\').click()" style="padding:11px;border:1px solid var(--b1);border-radius:var(--r12);background:var(--z800);font-family:var(--font);font-size:14px;font-weight:600;color:var(--t1);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;"><i class="fa-solid fa-screwdriver-wrench"></i>Search compatible parts</button>'+
+      '</div>'+
+    '</div>'+
+    '</div>';
 }
 $("mSpecsBtn").addEventListener("click",doMSpecs);
 $("mSpecsIn").addEventListener("keypress",e=>e.key==="Enter"&&doMSpecs());
@@ -1633,29 +1645,21 @@ async function loadMSpecD(id,title){
   }catch{wrap.innerHTML=mt("Could not load specs","GSMArena may be unavailable.","fa-solid fa-triangle-exclamation");}
 }
 
-/* ═══ DESKTOP SPECS ═══ */
-async function doDSpecs(){
+/* ═══ DESKTOP SPECS — browser-side redirect ═══ */
+function doDSpecs(){
   const q=$("dSpecsIn").value.trim();
   if(!q){toast("Enter a device name","err","fa-mobile-screen");return;}
-  dSQ=q;saveRec("specs::"+q);
-  if(dSAb)dSAb.abort();dSAb=new AbortController();
-  $("dSpecsBtn").disabled=true;$("dSpecsBtn").innerHTML='<i class="fa-solid fa-spinner fa-spin"></i>Searching...';
-  $("dResults").innerHTML=skel(4);$("dResB").textContent="...";$("dResB").className="dcb";
-  try{
-    const res=await fetch(API+"/specs-search?q="+encodeURIComponent(q),{signal:dSAb.signal});
-    const data=await res.json();
-    if(!data.success||!data.results?.length){$("dResults").innerHTML=mt("No devices found","No results for \""+q+"\"","fa-solid fa-satellite-dish");$("dResB").textContent="0";return;}
-    const n=data.results.length;$("dResB").textContent=n+" device"+(n!==1?"s":"");$("dResB").className="dcb on";
-    $("dResults").innerHTML='<div style="padding:12px"><div class="dev-grid">'+data.results.map((dv,i)=>'<div class="dev-card" data-id="'+esc(dv.id)+'" data-title="'+esc(dv.title)+'" style="animation-delay:'+(i*.04)+'s"><img class="dev-img" src="'+esc(dv.img||"")+'" onerror="this.style.display=\'none\'" alt="'+esc(dv.title)+'"><div class="dev-name">'+esc(dv.title)+'</div></div>').join("")+'</div></div>';
-    $("dResults").querySelectorAll(".dev-card").forEach(c=>c.addEventListener("click",()=>{
-      const title=c.dataset.title;
-      if(title){$("dModelIn").value=title;dSQ=title;}
-      loadDSpecD(c.dataset.id,title);
-    }));
-  }catch(e){
-    if(e.name==="AbortError")return;
-    $("dResults").innerHTML=mt("Search failed","GSMArena may be unavailable.","fa-solid fa-triangle-exclamation");
-  }finally{$("dSpecsBtn").disabled=false;$("dSpecsBtn").innerHTML='<i class="fa-solid fa-satellite-dish"></i>Search';dSAb=null;}
+  saveRec("specs::"+q);
+  window.open("https://www.gsmarena.com/res.php3?sSearch="+encodeURIComponent(q),"_blank");
+  $("dResB").textContent="Opened";$("dResB").className="dcb on";
+  $("dResults").innerHTML=
+    '<div style="padding:16px;display:flex;flex-direction:column;gap:11px;">'+
+    '<div style="padding:12px 14px;background:var(--a-bg);border:1px solid var(--a-b);border-radius:var(--r12);">'+
+      '<div style="font-size:13px;font-weight:600;color:var(--a-l);margin-bottom:3px;"><i class="fa-solid fa-arrow-up-right-from-square"></i> Opened GSMArena</div>'+
+      '<div style="font-size:12px;color:var(--t2);line-height:1.6;">Searching <strong style="color:var(--t0);">'+esc(q)+'</strong> — check the new tab.</div>'+
+    '</div>'+
+    '<button onclick="window.open(\'https://www.gsmarena.com/res.php3?sSearch='+encodeURIComponent(q)+'\',\'_blank\')" style="padding:10px;border:1px solid var(--a-b);border-radius:var(--r10);background:var(--a-bg);font-family:var(--font);font-size:13px;font-weight:600;color:var(--a-l);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;"><i class="fa-solid fa-magnifying-glass"></i>Open GSMArena again</button>'+
+    '</div>';
 }
 $("dSpecsBtn").addEventListener("click",doDSpecs);
 $("dSpecsIn").addEventListener("keypress",e=>e.key==="Enter"&&doDSpecs());
