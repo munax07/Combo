@@ -695,65 +695,33 @@ const server = http.createServer(async (req, res) => {
   }
 
   // GSMArena search
+  // ── Specs search — uses public GSMArena API (no scraping, no IP blocking)
+  // Public API: https://api-gsm-arena.vercel.app — free, no key needed
   if (pathname === "/specs-search") {
     const rl = checkRateLimit(ip, "strict");
     if (!rl.allowed) return sendJson(res, req, 429, { error: "Rate limit" }, start);
     const query = (url.searchParams.get("q") || "").trim().slice(0, 80);
     if (!query) return sendJson(res, req, 400, { error: "Missing query" }, start);
     try {
-      // Correct GSMArena search URL — confirmed from their actual search form
-      // res.php3?sSearch=query  (NOT results.php3?sQuickSearch=yes&sName=)
-      const searchUrl = `https://www.gsmarena.com/res.php3?sSearch=${encodeURIComponent(query)}`;
-      const gsmRes = await axios.get(searchUrl,
-        {
-          headers: {
-            "User-Agent": nextUA(),
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            "Accept-Language": "en-US,en;q=0.5",
-            "Accept-Encoding": "gzip, deflate, br",
-            "Connection": "keep-alive"
-          },
-          timeout: GSMARENA_TIMEOUT,
-          signal:  AbortSignal.timeout(GSMARENA_TIMEOUT + 3000)
-        }
+      const apiRes = await axios.get(
+        `https://api-gsm-arena.vercel.app/gsm/search?q=${encodeURIComponent(query)}`,
+        { timeout: GSMARENA_TIMEOUT, signal: AbortSignal.timeout(GSMARENA_TIMEOUT + 3000) }
       );
-      const $g      = cheerio.load(gsmRes.data);
-      const results = [];
-
-      // Try multiple selectors — GSMArena occasionally updates their markup
-      const sels = [".makers li", ".makers ul li", "ul.row li", "[class*=makers] li"];
-      let hit = false;
-      for (const sel of sels) {
-        $g(sel).each((_, el) => {
-          const a     = $g(el).find("a");
-          const href  = a.attr("href") || "";
-          const title = a.find("img").attr("title") || a.find("strong").text().trim() || a.text().trim();
-          const img   = a.find("img").attr("src") || "";
-          if (href && title) { results.push({ id: href, title, img }); hit = true; }
-        });
-        if (hit) break;
-      }
-
-      // Deep fallback: scan all device page links
-      if (!results.length) {
-        $g("a[href]").each((_, el) => {
-          const href  = $g(el).attr("href") || "";
-          const title = $g(el).find("img").attr("title") || $g(el).find("strong").text().trim() || $g(el).text().trim();
-          const img   = $g(el).find("img").attr("src") || "";
-          // GSMArena device pages end in -NNNN.php
-          if (href && title && /^[\w-]+-\d+\.php$/.test(href)) {
-            results.push({ id: href, title, img });
-          }
-        });
-      }
-
-      return sendJson(res, req, 200, { success: true, results: results.slice(0, 30) }, start, CACHE.short);
+      // API returns array of { id, name, image }
+      const raw = Array.isArray(apiRes.data) ? apiRes.data : (apiRes.data.result || apiRes.data.results || []);
+      const results = raw.slice(0, 30).map(d => ({
+        id:    d.id    || d.slug || "",
+        title: d.name  || d.title || "",
+        img:   d.image || d.img   || ""
+      })).filter(d => d.id && d.title);
+      return sendJson(res, req, 200, { success: true, results }, start, CACHE.short);
     } catch (err) {
-      return sendJson(res, req, 502, { error: "GSMArena temporarily unavailable" }, start);
+      log("warn", "Specs search failed", { error: err.message });
+      return sendJson(res, req, 502, { success: false, error: "Specs unavailable", results: [] }, start);
     }
   }
 
-  // GSMArena details
+  // ── Specs details — uses public GSMArena API
   if (pathname === "/specs-details") {
     const rl = checkRateLimit(ip, "strict");
     if (!rl.allowed) return sendJson(res, req, 429, { error: "Rate limit" }, start);
@@ -762,60 +730,39 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, req, 400, { error: "Invalid id" }, start);
     }
     try {
-      const detailRes = await axios.get(`https://www.gsmarena.com/${id}`, {
-        headers: {
-          "User-Agent": nextUA(),
-          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-          "Accept-Language": "en-US,en;q=0.5",
-          "Accept-Encoding": "gzip, deflate, br",
-          "Connection": "keep-alive"
-        },
-        timeout: GSMARENA_TIMEOUT,
-        signal:  AbortSignal.timeout(GSMARENA_TIMEOUT + 3000)
-      });
-      const $d    = cheerio.load(detailRes.data);
-      // Name: try multiple selectors
-      const name  = $d(".specs-phone-name-title").text().trim()
-                 || $d("h1.specs-phone-name-title").text().trim()
-                 || $d("h1").first().text().trim()
-                 || "Unknown device";
-      // Image
-      const img   = $d(".specs-photo-main img").attr("src")
-                 || $d(".phone-big-photo img").attr("src")
-                 || $d(".specs-photo img").attr("src")
-                 || "";
+      const apiRes = await axios.get(
+        `https://api-gsm-arena.vercel.app/gsm/info/${encodeURIComponent(id)}`,
+        { timeout: GSMARENA_TIMEOUT, signal: AbortSignal.timeout(GSMARENA_TIMEOUT + 3000) }
+      );
+      const d = apiRes.data;
+      if (!d || (!d.name && !d.Name)) throw new Error("Empty response");
+
+      const name = d.name || d.Name || id;
+      const img  = d.image || d.img || d.thumbnail || "";
+
+      // Flatten the API response into sections for our UI
       const specs = {};
-
-      // Primary: table-based specs (GSMArena classic layout)
-      $d("#specs-list table, table.specslist, table").each((_, table) => {
-        const head = $d(table).find("th").first().text().trim();
-        if (!head) return;
-        if (!specs[head]) specs[head] = {};
-        $d(table).find("tr").each((_, row) => {
-          const k = $d(row).find("td").eq(0).text().trim();
-          const v = $d(row).find("td").eq(1).text().replace(/\s+/g, " ").trim();
-          if (k && v && k.length < 60) specs[head][k] = v;
-        });
-        // Remove empty sections
-        if (!Object.keys(specs[head]).length) delete specs[head];
-      });
-
-      // Fallback: definition list format
-      if (!Object.keys(specs).length) {
-        $d("dl").each((_, dl) => {
-          const head = $d(dl).prev("h2, h3, th").text().trim() || "Specs";
-          if (!specs[head]) specs[head] = {};
-          $d(dl).find("dt").each((_, dt) => {
-            const k = $d(dt).text().trim();
-            const v = $d(dt).next("dd").text().replace(/\s+/g, " ").trim();
-            if (k && v) specs[head][k] = v;
-          });
-        });
+      const SKIP  = new Set(["name","Name","image","img","thumbnail","id","slug"]);
+      for (const [section, val] of Object.entries(d)) {
+        if (SKIP.has(section)) continue;
+        if (val && typeof val === "object" && !Array.isArray(val)) {
+          // It's already a section object like { type, size, resolution }
+          specs[section] = {};
+          for (const [k, v] of Object.entries(val)) {
+            if (v && typeof v === "string") specs[section][k] = v;
+          }
+          if (!Object.keys(specs[section]).length) delete specs[section];
+        } else if (val && typeof val === "string") {
+          // Top-level string field — put in General
+          if (!specs["General"]) specs["General"] = {};
+          specs["General"][section] = val;
+        }
       }
 
       return sendJson(res, req, 200, { success: true, name, img, specs }, start, CACHE.medium);
     } catch (err) {
-      return sendJson(res, req, 502, { error: "GSMArena temporarily unavailable" }, start);
+      log("warn", "Specs detail failed", { id, error: err.message });
+      return sendJson(res, req, 502, { success: false, error: "Specs unavailable" }, start);
     }
   }
 
@@ -936,7 +883,7 @@ process.on("unhandledRejection", reason => log("error", "Unhandled rejection", {
   server.listen(PORT, "0.0.0.0", () => {
     const total = Object.values(searchIndex).reduce((s, c) => s + c.models.length, 0);
     console.log("\n🚀 ══════════════════════════════════════════════════");
-    console.log("    UNIPARTS PRO  ·  HYBRID LIVE + FUCk BACKUP  ·  FINAL");
+    console.log("    UNIPARTS PRO  ·  HYBRID LIVE + BACKUP  ·  FINAL");
     console.log(`    🌐  Port         : ${PORT}`);
     console.log(`    🌍  Environment  : ${NODE_ENV}`);
     console.log(`    📦  Categories   : ${Object.keys(searchIndex).length}`);
